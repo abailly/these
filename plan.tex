@@ -1,0 +1,186 @@
+\documentclass[french,a4paper,leqno,twoside]{book}
+\usepackage{a4wide}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{babel}
+\usepackage[latin1]{inputenc}
+
+
+\title{Plan de th\`ese}
+% $Id$
+\begin{document}
+\nopagebreak
+\maketitle
+% \tableofcontents
+
+\chapter{Introduction}
+\section{Contexte}
+\section{Probl\'emes}
+\section{R\'esum\'e}
+
+\part{Composants}
+
+\chapter{Mod\`eles pour les composants}
+
+\section{Mod\`ele formels}
+
+\subsection{Langages de descriptions d'architecture}
+ (Wright, Rapide)
+\subsection{Co-alg\`ebres}
+ (REO, Composants g\'en\'eriques)
+\subsection{Calculs de pracessus}
+ (kell-calcul, pi-calcul, ambients)
+\subsection{M\'eta-mod\`eles UML}
+ (eDoc, UML 2.0)
+
+\section{Implantation}
+
+Syst\`emes, Langages, Plates-formes et intergiciels
+
+\subsection{Modules, biblioth\`eques}
+oldies but goldies : DLL (DLL nightmare), shared object, compilation
+s\'epar\'ee, fichiers en-t\^ete (.h)
+\subsection{Corba 3.0}
+\subsection{J2EE}
+\subsection{.Net}
+\subsection{Langages d\'edi\'es}
+ArchJava
+\subsection{Conteneurs logiques}
+ (Spring, Pico)
+
+
+\chapter{Mod\`ele de composant FIDL}
+
+\section{Mod\`ele}
+
+ - Interfaces 
+ - \'Ev\'enements 
+ - Composants
+ - Composition
+ - Dynamicit\'e
+ - M\'eta-mod\`ele UML
+ 
+\section{Le langage FIDL}
+
+\subsection{La notation IDL3}
+\subsection{Syntaxe FIDL}
+\begin{itemize}
+  \item Structure 
+  \item Comportement
+\end{itemize}
+
+\section{S\'emantique - Traces} 
+ 
+\begin{itemize}
+  \item D\'efinitions, notations
+  \item Alphabets
+  \item Traces d'une interface
+  \item Traces d'un composant
+  \item Connexions
+  \item Traces d'un composite
+  \item Syst\`eme
+\end{itemize}
+
+\chapter{Automates FIDL}
+
+\begin{itemize}
+  \item d\'efinition du formalisme des automates FIDL, lien avec les
+    IOLTS, FSM et assimil\'es
+  \item Construction
+  \item d\'efinition des fonctions utilis\'ees dans les donn\'ees
+    des messages
+  \item preuve de la rationalit\'e des automates FIDL d\'epli\'es
+    (avec les valeurs instanci\'ees)
+  \item d\'efinition de la reconnaissance de langages de messages par
+    les automates FIDL, simples, puis synchronis\'ees
+  \item preuve de l'\'equivalence entre le langage d'une produit de
+    synchronisation et la synchronisation d'automates
+  \item d\'efinition des langages des diff\'erents \'el\'ements
+    d'un syst\`eme : interface, port, composant, composants
+    connect\'es
+  \item d\'efinition du probl\`eme de r\'esolution de contraintes
+    pour la g\'en\'eration de valeurs
+\end{itemize}
+
+\chapter{Composition \& H\'eritage}
+
+\section{Composition}
+
+\section{H\'eritage \& Sous-typage comportemental}
+
+\part{Test de composants} 
+
+\chapter{\'Etat de l'art : le test de logiciels}
+
+\begin{itemize}
+  \item Test fonctionnel/structures
+  \item Test bo\^{\i}te noire/bo\^{\i}te de verre
+  \item Test unitaire/syst\`eme
+  \item Test statistique/al\'eatoire
+\end{itemize}
+
+\chapter{Test de composants}
+
+\section{Le test de conformit\'e}
+\begin{itemize}
+  \item d\'efinition du contexte de test : notion de testeur de port,
+    de testeur de composant, de langage observ\'e et observable, de
+    conformit\'e du composant test\'e par rapport au langage du
+    testeur.
+  \item d\'efinition de la relation de conformit\'e *associ\'ee* au
+    ou *v\'erifi\'ee* par le testeur de composant (cf. MIOTS,
+    inclusion de traces)
+  \item d\'efinition des **observateurs** de facettes, de ports, de
+    composants par compl\'etion des sp\'ecifications associ\'ees
+    aux diff\'erents ports
+  \item d\'efinition d'un testeur de conformit\'e comme un composant
+    dont le comportement est exactement celui r\'esultant de la
+    composition des observateurs
+  \item d\'efinition de l'algorithme de test pour ports multiples
+\end{itemize} 
+
+\section{Le test de r\'esilience}
+\begin{itemize}
+   \item d\'efinition de la propri\'et\'e de transparence
+  \item test de la propri\'et\'e de compositionnalit\'e :
+    d\'efinition d'un testeur pour la transparence
+  \item d\'efinition de la r\'esilience
+  \item d\'efinition d'un testeur pour la r\'esilience
+  \item algorithme pour tester la transparence et la r\'esilience
+\end{itemize}
+
+\section{S\'election des tests}
+
+\part{Test \& G\'enie logiciel}
+
+\chapter{Processus de d\'eveloppement et composants}
+
+\section{M\'ethodologie orient\'ee composants}
+\section{Ing\'enierie des mod\`eles}
+\section{\'Etude de cas}
+
+\chapter{M\'ethodes \& outils}
+ 
+\section{Tests unitaires}
+\section{Tests fonctionnels et d\'evellopement}
+\section{Tests d'int\'egration}
+\section{Recette \& Tests d'acceptation}
+
+\chapter{Outil FIDL}
+\section{Architecture}
+\section{Exemple}
+\section{\emph{Test-driven development}}
+
+\chapter{Conclusion}
+\section{Contributions}
+\section{Perspectives}
+
+\appendix
+\chapter{Grammaire FIDL}
+\chapter{Jaskell}
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

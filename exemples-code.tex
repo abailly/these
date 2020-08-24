@@ -1,0 +1,173 @@
+\lstset{basicstyle=\footnotesize\sffamily,frame=none}
+
+\section{Exemple d'applications de gestion de commandes}
+
+\begin{lstlisting}
+module Commande {
+
+   exception CommandeInvalide {};
+   exception PaiementInvalide {};
+   exception CarteInvalide {};
+   exception MontantIncorrect {};
+
+   struct article {
+      long ref; 
+      long prix;
+      short qte;
+   };
+ 
+    struct commande {
+      long id;
+      long montant;
+      sequence<article> articles;
+   };
+   
+   struct paiementBA {
+      long ref;
+      long montant;
+   };
+
+   struct paiementCB {
+      string numeroCB;
+      string expiration;
+      string cle;
+      long montant;
+   };
+
+  eventtype CommandeEvent { public commande com; };
+
+  interface Commande {
+      commande nouvelleCommande();
+      void ajouterArticle(in commande c,in article a);
+      boolean validerCommande(in commande c);
+      void annulerCommande(in commande c);
+
+      /*** FIDL
+        (com in nouvelleCommande(:com) ajouterArticle(_,_)* 
+          ((->validerCommande(com) <-validerCommande(:false))* annulerCommande(com) + 
+            ->validerCommande(com) <-validerCommande(:true)))*
+       */
+   };
+
+   interface Paiement {
+      void ajouterPaiementBA(in commande com,in paiementBA ba) 
+         raises (PaiementInvalide, CommandeInvalide);
+      void ajouterPaiementCB(in commande com,in paiementCB cb) 
+         raises (PaiementInvalide, CommandeInvalide, CarteInvalide);
+      boolean validerPaiement(in commande com) 
+         raises (CommandeInvalide, MontantIncorrect);
+      void annulerPaiement(in commande com);
+
+      /*** FIDL
+          ((->ajouterPaiementBA(_,_) (<-ajouterPaiementBA() + 
+                                  <-ajouterPaiementBA<PaiementInvalide> + 
+                                  <-ajouterPaiementBA<CommandeInvalide>) 
+           ->ajouterPaiementCB(_,_) (<-ajouterPaiementCB() + 
+                                  <-ajouterPaiementCB<PaiementInvalide> + 
+                                  <-ajouterPaiementCB<CarteInvalide> + 
+                                  <-ajouterPaiementCB<CommandeInvalide>))*
+            (->validerPaiement(_) (<-validerPaiement<CommandeInvalide> + 
+                                 <-validerPaiement<MontantIncorrect>))*
+             (annulerPaiement(_)+
+              validerPaiement(_:_)))*                                 
+       */
+    };
+
+    component Store {
+        provides Commande com;
+        provides Paiement pai;
+        publishes CommandeEvent ev;
+     
+        /*** FIDL
+            (cm in com.nouvelleCommande(:cm) pai.validerPaiement(cm:true) 
+               com.validerCommande(cm:true) ev[cm])*
+         @@ 
+            (cm in com.nouvelleCommande(:cm) pai->validerPaiement(cm) 
+               pai<-validerPaiement<MontantIncorrect> com.validerCommande(cm:false))*
+         @@ 
+            com.validerCommande(_:false)*
+         @@
+            (pai->validerPaiement(_) pai<-validerPaiement<CommandeInvalide>)*
+         */
+    };         
+};
+
+module Paiement {
+     
+    interface PaiementCB {
+         boolean validerNumero(in string numero);
+         boolean carteEnOpposition(in string numero);
+
+        /*** FIDL 
+          (validerNumero(_:_) + carteEnOpposition(_:_))*
+         */
+    };
+    
+    interface PaiementBA {
+         boolean validerBA(in long ref);
+
+        /*** FIDL
+          (validerBA(_:_))*
+         */
+    };
+
+    interface EtatReglement {
+        boolean paiementOK(in ::Commande::commande com);
+
+        /*** FIDL
+           paiementOK(_:_)*
+         */
+         
+    };
+
+    component Reglement {
+        provides Commande::Paiement pai;
+        provides EtatReglement etat;
+        uses     PaiementCB cb;
+        uses     PaiementBA ba;
+
+        /*** FIDL 
+           (cb,cm in pai->ajouterPaiementCB(cm,cb) cb.validerNumero(cb.numeroCB:true) 
+                                             cb.carteEnOpposition(cb.numeroCB:false)
+                                             pai<-ajouterPaiementCB())*
+          @@
+           (cb in pai->ajouterPaiementCB(_,cb)
+             cb.validerNumero(cb.numeroCB:false) 
+             pai<-ajouterPaiementCB<Commande::CarteInvalide>)*
+          @@
+           (cb in pai->ajouterPaiementCB(_,cb) 
+              cb.carteEnOpposition(cb.numeroCB:true) 
+              pai<-ajouterPaiementCB<Commande::CarteInvalide>)*
+          @@ 
+           (ba in pai->ajouterPaiementBA(_,ba) 
+              ba.validerBA(ba.ref : true) pai<-ajouterPaiementBA())*
+          @@ 
+           (ba in pai->ajouterPaiementBA(_,ba) 
+              ba.validerBA(ba.ref : false) 
+              pai<-ajouterPaiementBA<Commande::PaiementInvalide>)*
+          @@
+           (cm in pai.validerPaiement(cm:true) etat.paiementOK(cm:true))*
+          @@
+            etat.paiementOK(_:false)*
+         */
+     };    
+
+     component Order {
+         provides Commande::Commande com;
+         uses EtatReglement reg;
+         publishes Commande::CommandeEvent ev;
+
+         /*** FIDL
+            (cm in com->validerCommande(cm) 
+               (reg.paiementOK(cm:true) com<-validerCommande(true) ev[cm] +
+                reg.paiementOK(cm:false) com<-validerCommande(false)))*
+          */
+            
+     };
+};
+\end{lstlisting}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "these"
+%%% End: 

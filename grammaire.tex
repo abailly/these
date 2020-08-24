@@ -1,0 +1,207 @@
+\section{FIDL}
+\label{annexe-grammaire-fidl}
+
+\begin{tabbing}
+aaaaaaaaaaaaaaaaaaaaaaaa\=aaa\=aaa\=and \=aaa\=aaaaaaaaaaaaaaaaaaaaaa\=aaa\=aaaaaaaaaaaaaaaaaa\=\kill
+\emph{specification-fidl}\>\twocol=\> \texttt{FIDL} \emph{comportement}\\
+\>$\mid$\>\texttt{header} \emph{function\_headers} \texttt{FIDL} \emph{comportement} 
+\texttt{body} \emph{function\_bodies}\\
+
+\emph{comportement}\>\twocol=\>  \emph{specification-facettes} \emph{expression-comportement} \\
+    \>$\mid$\> \emph{expression-comportement} \\
+
+\emph{specification-facettes}\>\twocol=\>  \texttt{facets} \emph{liste-facettes} \texttt{;}\\
+
+\emph{liste-facettes}\>\twocol=\>  \emph{liste-facettes} \texttt{,} \emph{facette} \\
+    \>$\mid$\> \emph{facette} \\
+
+\emph{facette}\>\twocol=\> \texttt{multiple}\emph{port\_name} \\
+    \>$\mid$\> \texttt{single} \emph{port\_name} \\
+    \>$\mid$\> \texttt{unique} \emph{port\_name} \\
+
+\emph{expression-comportement}\>\twocol=\>  \emph{expression-comportement} \verb+@@+ \emph{expression-elementaire} \\
+    \>$\mid$\> \emph{expression-elementaire}\\
+
+\emph{expression-elementaire}\>\twocol=\>  \emph{contrainte} \texttt{in} \emph{expression-base} \\
+    \>$\mid$\> \emph{expression-base}\\
+
+\emph{contrainte}\>\twocol=\> \emph{contrainte} \texttt{;} \emph{decl-variable} \\
+    \>$\mid$\> \emph{decl-variable}\\
+
+\emph{decl-variable}\>\twocol=\>\emph{variable\_name} \texttt{:} \emph{expr-contrainte} \\
+    \>$\mid$\> \emph{variable\_name} \texttt{::} \emph{type\_name} \\
+
+\emph{expression-base}\>\twocol=\> \emph{expression-base} \verb+||+ \emph{expression-par} \\
+    \>$\mid$\> \emph{expression-par} \\
+
+\emph{expression-par}\>\twocol=\>  \emph{expression-par} \verb|+| \emph{expression-alt} \\
+    \>$\mid$\> \emph{expression-alt}\\
+
+\emph{expression-alt}\>\twocol=\>  \emph{expression-alt} \emph{expression-star} \\
+    \>$\mid$\> \emph{expression-star} \\
+
+\emph{expression-star}\>\twocol=\>  \emph{expression-atom} \texttt{*} \\
+    \>$\mid$\> \emph{expression-atom} \\
+
+
+\emph{expression-atom}\>\twocol=\> \emph{message} \\ 
+    \>$\mid$\>\texttt{(} \emph{expression-elementaire} \texttt{)}\\
+
+\emph{message}\>\twocol=\>\emph{message\_complet} $\mid$
+\emph{message\_simplifie}\\
+
+\emph{message\_complet}\>\twocol=\> \emph{arrow} \emph{method\_name}
+\texttt{(} \emph{parametres-message} \texttt{)}  \\
+    \>$\mid$\> \emph{port\_name} \emph{arrow} \emph{method\_name} \texttt{(} \emph{parametres-message} \texttt{)}  \\  
+    \>$\mid$\> \emph{port\_name}\texttt{[} \emph{parametres-event} \texttt{]}  \\
+    \>$\mid$\> \texttt{<-}\emph{method\_name} \texttt{<} \emph{exception} \texttt{>}\\
+    \>$\mid$\> \emph{port\_name} \texttt{<-} \emph{method\_name}
+    \texttt{<} \emph{exception} \texttt{>}\\
+
+\emph{message\_simplifie}\>\twocol=\> \emph{method\_name} \texttt{(} \emph{parametres-message} \texttt{)}  \\
+    \>$\mid$\> \emph{port\_name} \texttt{.} \emph{method\_name} \texttt{(} \emph{parametres-message} \texttt{)}  \\
+    \>$\mid$\> \emph{port\_name} \texttt{.} \emph{method\_name}
+    \texttt{<} \emph{exception} \texttt{>}\\
+
+    \>$\mid$\> \texttt{void}\\ 
+
+%% \emph{message\_type}\>\twocol=\>\emph{identifiant} \emph{kind}\\
+%% \>$\mid$\>\emph{arrow} \\
+%% \>$\mid$\>$\varepsilon$ \\
+
+%% \emph{exception\_message\_type}\>\twocol=\>\emph{identifiant} \texttt{.}\\
+%% \>$\mid$\>\texttt{<-} \\
+%% \>$\mid$\>\emph{identifiant} \texttt{<-} \\
+%% \>$\mid$\>$\varepsilon$ \\
+
+
+\emph{parametres-event}\>\twocol=\>\emph{liste-expr-message}\\
+    \>$\mid$\> $\varepsilon$\\
+
+\emph{parametres-message}\>\twocol=\>  \emph{liste-expr-message} \\
+    \>$\mid$\> \texttt{:} \emph{expr-message} \\
+    \>$\mid$\> \emph{liste-expr-message} \texttt{:} \emph{expr-message} \\
+    \>$\mid$\> $\varepsilon$\\
+
+\emph{liste-expr-message}\>\twocol=\>  \emph{liste-expr-message} \texttt{,} \emph{expr-message}\\
+    \>$\mid$\> \emph{expr-message} \\
+
+\emph{expr-message}\>\twocol=\> \emph{literal} \\
+    \>$\mid$\> \emph{variable\_name}\\
+    \>$\mid$\> \verb+_+\\
+
+\emph{exception}\>\twocol=\> \emph{exception\_name} \texttt{[} \emph{liste-expr-message} \texttt{]}\\
+    \>$\mid$\>  \emph{exception\_name}\\
+
+\emph{arrow}\>\twocol=\>  \verb+->+ \\
+\>$\mid$\> \verb+<-+ \\
+
+\emph{expr-contrainte}\>\twocol=\> \emph{variable\_name} \emph{operator} \emph{expr-fonctionnelle}\\
+
+\emph{expr-fonctionnelle}\>\twocol=\> \emph{variable\_name}  \\
+    \>$\mid$\> \emph{literal}  \\
+    \>$\mid$\> \emph{function\_name} \texttt{(} \emph{liste-parametres} \texttt{)} \\
+    \>$\mid$\> \emph{function\_name} \texttt{(} \texttt{)} \\
+    \>$\mid$\> \emph{expr-fonctionnelle} \emph{bin-op}
+    \emph{expr-fonctionnelle}\\
+    \>$\mid$\> \emph{un-op}  \emph{expr-fonctionnelle}\\
+    \>$\mid$\> \texttt{(} \emph{expr-fonctionnelle} \texttt{)} \\
+
+\emph{liste-parametres}\>\twocol=\>\emph{liste-parametres}\texttt{,}
+    \emph{parametre-fonction}\\
+    \>$\mid$\> \emph{parametre-fonction}\\
+
+\emph{parametre-fonction}\>\twocol=\>\emph{expr-fonctionnelle} \\
+    \>$\mid$\> \texttt{Trace}\\
+    \>$\mid$\> \emph{message\_complet}\\
+
+
+\emph{bin-op}\>\twocol=\>\verb+<+ $\mid$ \verb+==+ $\mid$ \verb+>+
+$\mid$ \verb+<=+ $\mid$ \verb+>=+ $\mid$ \verb+&&+ $\mid$ \verb+||+
+$\mid$ \verb+^^+ $\mid$  \verb+!=+ $\mid$ \verb:+: $\mid$  \verb:-: $\mid$  \verb:*: $\mid$
+    \verb:/: $\mid$  \verb:%: \\
+
+\emph{un-op}\>\twocol=\>\texttt{!}\\
+
+\emph{identifiant}\>\twocol=\>  [\texttt{a}-\texttt{z}
+\texttt{A}-\texttt{Z}] [ \texttt{a}-\texttt{z} \texttt{A}-\texttt{Z} \texttt{0}-\texttt{9}
+\texttt{\_} ]$^*$ \\
+
+\emph{operator}  \>\twocol=\>  \verb+<+ $\mid$ \verb+=+ $\mid$ \verb+>+ $\mid$ \verb+<=+ $\mid$ \verb+>=+ $\mid$ \verb+!=+ \\ %$
+%% \emph{operator}  \>\twocol=\> \emph{symbol} $\mid$ \emph{symbol} \emph{symbol} \\ 
+
+
+%% \emph{symbol}   \>\twocol=\>  \verb+!+ $\mid$ \verb+#+ $\mid$ \verb+%+ $\mid$ \verb+*+ $\mid$ \verb\textdegree{}+\textdegree{} $\mid$ \verb+/+ $\mid$ \verb+<+ $\mid$ \verb+=+ $\mid$ \verb+>+ $\mid$ \verb+?+ $\mid$ \verb+^+ $\mid$ \verb+-+ $\mid$ \verb+~+
+%% \\ %$
+
+\emph{literal}\>\twocol=\>  \emph{integer-literal} \\
+    \>$\mid$\> \emph{string-literal}  \\
+    \>$\mid$\> \emph{character-literal} \\ 
+    \>$\mid$\> \emph{floating-pt-literal} \\ 
+    \>$\mid$\> \verb+{+ \emph{literal-list} \verb+}+ $\mid$ \verb:{}:\\
+
+\emph{literal-list}\>\twocol=\> \emph{literal-list} \texttt{,} \emph{literal}\\ 
+    \>$\mid$\> \emph{literal}\\
+
+\emph{integer-literal}\>\twocol=\> \texttt{0} [\texttt{oO}] [\texttt{0}-\texttt{7}]$^+$ \\
+    \>$\mid$\>  \texttt{0} [\texttt{xX}] [\texttt{0}-\texttt{9} \texttt{a}-\texttt{f} \texttt{A}-\texttt{F}]$^+$ \\ 
+    \>$\mid$\>  [\texttt{0}-\texttt{9}]$^+$ \\ 
+
+\emph{floating-pt-literal}\>\twocol=\>  [\texttt{0}-\texttt{9}]$^*$ \texttt{.}[\texttt{0}-\texttt{9}]$^+$
+\emph{exponent-part} \\
+\emph{exponent-part}\>\twocol=\>
+[\texttt{e}\texttt{E}] [\texttt{0}-\texttt{9}] \\
+    \>$\mid$\>[\texttt{e}\texttt{E}] [\texttt{+}\texttt{-}] [\texttt{0}-\texttt{9}] \\
+\>$\mid$\>$\varepsilon$ \\ 
+
+\emph{scoped\_name}\>\twocol=\>\verb+::+ \emph{colon\_name}\\
+ \>$\mid$\>\emph{colon\_name}\\
+
+\emph{colon\_name}\>\twocol=\>\emph{colon\_name} \verb+::+ \emph{identifiant}\\
+ \>$\mid$\>\emph{identifiant}\\
+
+
+\emph{function\_headers}\>\twocol=\>\emph{function\_headers}
+\texttt{;} \emph{function\_header}  \\
+\>$\mid$\>\emph{function\_header}  \\
+
+\emph{function\_header}\>\twocol=\>\emph{function\_name} \texttt{:} \emph{in\_types}
+\texttt{$\rightarrow$} \emph{elementary\_type}\\
+
+\>$\mid$\>\emph{function\_name} \texttt{:} \texttt{$\rightarrow$} \emph{elementary\_type}\\
+
+\emph{in\_types}\>\twocol=\>\emph{in\_types} \texttt{,} \emph{in\_type}\\
+\>$\mid$\>\emph{in\_type}\\
+
+\emph{elementary\_type}\>\twocol=\> \texttt{long} $\mid$ \dots\\
+
+\emph{in\_type}\>\twocol=\>\emph{elementary\_type} $\mid$
+\texttt{Trace} $\mid$ \texttt{Message}\\
+
+\emph{port\_name}\>\twocol=\>\emph{identifiant}\\
+
+\emph{variable\_name}\>\twocol=\>\emph{identifiant}\\
+
+\emph{method\_name}\>\twocol=\>\emph{identifiant}\\
+
+\emph{function\_name}\>\twocol=\>\emph{identifiant}\\
+
+\emph{exception\_name}\>\twocol=\>\emph{scoped\_name}\\
+
+\emph{type\_name}\>\twocol=\>\emph{scoped\_name}\\
+
+\emph{function\_bodies}\>\twocol=\> \emph{selon langage choisi}\\
+\end{tabbing}
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "these"
+%%% TeX-master: "these"
+%%% TeX-master: "these"
+%%% TeX-master: "these"
+%%% TeX-master: "these"
+%%% TeX-master: "these"
+%%% TeX-master: "~/recherche/text/these"
+%%% TeX-master: "these"
+%%% End: 

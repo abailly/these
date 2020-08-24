@@ -1,0 +1,89 @@
+\documentclass[a4paper,10pt,leqno,twoside]{book}
+\usepackage{a4wide}
+\usepackage{times}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[frenchb]{babel}
+\usepackage[latin1]{inputenc}
+\usepackage[OT1]{fontenc}
+\usepackage[dvips]{graphicx}
+\usepackage{multicol}
+\usepackage{floatflt}
+\usepackage{picinpar}
+\usepackage{epsfig}
+\usepackage{pstricks}
+\usepackage{float}
+\usepackage{diagrams}
+\usepackage{gastex}
+\usepackage{theorem}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\title{Test et Validation de composants}
+\author{Arnaud Bailly}
+
+
+
+\input{common}
+
+\setlength{\headheight}{12.59993pt}
+\pagestyle{fancy}
+\rfoot[]{\footnotesize\it\today~-~\timenow}
+\lfoot[\footnotesize\it\today~-~\timenow]{}
+\cfoot{\rm\thepage}
+
+\def\R{\ensuremath{\mathcal{R}}}
+\def\F{\ensuremath{\mathcal{F}}}
+\def\T{\ensuremath{\mathcal{T}}}
+
+\begin{document}
+\sloppy
+\tableofcontents
+\chapter*{Introduction}
+%\input{intro}
+\chapter{Processus de d\'eveloppement}
+\label{cha:proc-de-devol}
+\input{process-composants}
+\chapter{Architecture \& Composants}
+\label{chap-etatart}
+\input{etat_art_composants}
+\chapter{Test de conformit\'e}
+\label{chap-etatarttest}
+\input{etat_art_test}
+\chapter{Mod\`ele de composants FIDL}
+\label{chap-fidl}
+\input{modele-composants}
+\chapter{Automates \textsf{FIDL}}
+\label{cha:automates-fidl}
+\input{automates}
+\chapter{S\'emantique d'Architectures de Composants}
+\label{cha:composition}
+\input{composition}
+\chapter{Test de composants FIDL}
+\label{cha:test}
+\input{test-selection}
+\chapter{Mise en \OE uvre}
+\label{cha:methodes--outils}
+\input{outil-fidl}
+\chapter*{Conclusion}
+%\input{conclusion}
+\input{biblio}
+%% \appendix
+%% \chapter{Exemple de codes}
+%% \label{cha:exemple-de-codes}
+%% %\input{exemples-code}
+%% \chapter{Grammaire FIDL}
+%% \label{cha:grammaire-fidl}
+%% %\input{grammaire}
+%% \chapter{Jaskell}
+%% \label{cha:jaskell}
+%% %\input{jaskell}
+%% \chapter{Glossaire}
+%% \label{cha:glossaire}
+%% %\input{glossaire}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

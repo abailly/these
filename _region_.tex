@@ -1,0 +1,49 @@
+\message{ !name(these.tex)}\documentclass[a4paper,10pt,leqno,twoside]{book}
+\usepackage{a4wide}
+\usepackage{times}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[frenchb]{babel}
+\usepackage[latin1]{inputenc}
+\usepackage[OT1]{fontenc}
+\usepackage[dvips]{graphicx}
+\usepackage{multicol}
+\usepackage{floatflt}
+\usepackage{picinpar}
+\usepackage{epsfig}
+\usepackage{pstricks}
+\usepackage{float}
+\usepackage{diagrams}
+\usepackage{gastex}
+\usepackage{theorem}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\title{Test et Validation de composants}
+\author{Arnaud Bailly}
+
+
+
+\input{common}
+
+\pagestyle{fancy}
+\rfoot[]{\footnotesize\it\today~-~\timenow}
+\lfoot[\footnotesize\it\today~-~\timenow]{}
+\cfoot{\rm\thepage}
+
+\def\R{\ensuremath{\mathcal{R}}}
+\def\F{\ensuremath{\mathcal{F}}}
+\def\T{\ensuremath{\mathcal{T}}}
+
+\begin{document}
+{\makeatletter\gdef\AucTeX@cite#1[#2]#3{[#3#1#2]}\gdef\cite{\@ifnextchar[{\AucTeX@cite{, }}{\AucTeX@cite{}[]}}}
+
+\message{ !name(outil-fidl.tex) !offset(-15) }
+FIDL
+\message{ !name(these.tex) !offset(39) }
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

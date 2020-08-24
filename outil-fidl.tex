@@ -1,0 +1,403 @@
+
+Nous revenons dans ce chapitre \`a des aspects plus pratiques de la
+mise en  \oe uvre des mod\`eles et concepts pr\'esent\'es
+pr\'ec\'edemment dans le cadre d'un processus de d\'eveloppement. 
+L'objectif de ce chapitre est de d\'ecrire d'une part comment sont produits et
+manipul\'es les mod\`eles \textsf{FIDL} d'architecture de
+composants et d'autre part comment la g\'en\'eration et
+l'ex\'ecution des tests \`a partir des mod\`eles s'ins\`ere dans
+le processus de d\'eveloppement. 
+
+\section{Processus de test}
+
+Nous d\'etaillons dans cette section le processus concret de test de
+composants \`a partir de mod\`eles \textsf{FIDL}.
+
+\subsection{Plateforme de test}
+
+\`A partir d'une description quelconque d'un mod\`ele FIDL, par
+exemple en utilisant la syntaxe \textsf{IDL3} \'etendue
+pr\'esent\'ee au chapitre \ref{chap-fidl}, on construit une
+repr\'esentation m\'emoire des diff\'erents objets
+sp\'ecifi\'es. Ces objets sont r\'epartis en quatre cat\'egories distinctes :
+\begin{itemize}
+  \item les types de donn\'ees primitifs et construits, y compris les types
+    d'\'ev\'enements et les types d'exception ;
+  \item les entit\'es arcitecturales, interfaces, composants et
+    assemblages ; 
+  \item les descriptions de comportements autrement dit les automates
+    \textsf{FIDL} ;
+  \item les fonctions et pr\'edicats utilis\'es dans les contraintes
+  sur les automates \textsf{FIDL}.
+\end{itemize}
+
+Les types de donn\'ees, les fonctions et pr\'edicats sont
+compil\'es dans le langage d'implantation choisi pour la partie
+fonctionnelle du mod\`ele \textsf{FIDL}. En l'\'etat actuel de la
+plateforme, ces objets permettent de produire un ensemble de types de
+donn\'ees et de fonctions du langage Jaskell qui sont ensuite
+compil\'es vers du code-octet \textsf{Java}. 
+
+En fonction du choix de la plateforme technique d'ex\'ecution des
+tests, c'est \`a dire du choix du mode de d\'eploiement et
+d'implantation des composants, un certain nombre de souches sont
+g\'en\'er\'ees \`a partir des interfaces ou extraites de
+l'implantation. Dans le cas des composants CCM et POJO, les
+projections des interfaces fournies et requises par le composant sont
+normalement incluses dans l'ensemble des classes d'implantation et il
+n'est donc pas n\'ecessaire de les g\'en\'erer. 
+
+On choisi ensuite la sp\'ecification \`a tester et on d\'efinit le
+mode de d\'eploiement du CUT. \`A chaque plateforme technologique
+est associ\'e un d\'eployeur sp\'ecifique qui a pour fonction :
+\begin{itemize}
+  \item de construire un contexte d'ex\'ecution permettant au CUT de
+  s'ex\'ecuter normalement. Dans le cas de composants CCM ou de
+  composants de type applications Web ou EJB, ce contexte
+  d'ex\'ecution est un container du type appropri\'e. Dans le cas de
+  composants POJO, ce contexte est simplement un flot d'ex\'ecution
+  Java repr\'esentant l'application dont peut faire partie le
+  composant ;
+\item de r\'ealiser et de maintenir les connexions correspondant \`a
+  chaque port du composant. Chaque connexion doit assurer la
+  transformation des messages dans la technologie appropri\'ee pour
+  le port consid\'er\'e et inversement, ce que l'on nomme
+  \emph{marshalling}. \`A noter qu'il n'est pas n\'ecessaire qu'un
+  composant donn\'e se limite \`a un mode de connexion. Par exemple,
+  un composant servlet peu avoir un port fourni communiquant par
+  protocole HTTP et un port requis communiquant par RPC. 
+\end{itemize}
+On notera que le connecteur doit aussi assurer la transformation des
+donn\'ees transport\'ees par les messages depuis/vers les types
+manipul\'es par les fonctions et pr\'edicats dans les automates
+\textsf{FIDL}.
+
+Une fois le composant \`a tester pr\^et \`a s'ex\'ecuter, on
+d\'etermine les param\`etres de la session de test :
+\begin{itemize}
+  \item l'automate actif pour la session d\'etermine la strat\'egie
+    de test pour cette session. Cet automate peut \^etre soit
+    l'automate de la sp\'ecification d'un port, soit un automate de la
+    sp\'ecification du composant ; 
+  \item les param\`etres de contr\^ole de la fonction d'\'evaluation
+    : valuation des diff\'erents crit\`eres de s\'election et
+    objectif \`a atteindre pour la session ;
+  \item les g\'en\'erateurs pour les variables apparaissant dans les
+  messages d'entr\'ee du composant peuvent \^etre param\'etr\'es,
+  soit avec un enesemble fini de valeurs \`a tester, soit avec une
+  fonction de g\'en\'eration. Ce point est un des plus d\'elicats
+  car du choix des valeurs peut d\'ependre l'ex\'ecutabilit\'e de
+  certains chemins dans l'automate \textsf{FIDL}.
+\end{itemize}
+
+La session peut alors d\'emarrer : le contr\^oleur de test
+g\'en\'eral met en \oe uvre les algorithmes d\'etaill\'es dans le
+chapitre pr\'ec\'edent pour choisir les chemins d'ex\'ecution de la
+session de test et v\'erifie que les messages provenent du CUT sont
+bien conformes \`a ceux attendus. En cas de besoin, le CUT peut
+\^etre reinitialiser et donc red\'eployer.
+
+\subsection{Exemple de mise en \oe uvre}
+
+
+
+\section{Mod\`eles et processus de d\'eveloppement}
+
+La premi\`ere \'etape consiste \`a disposer d'un mod\`ele
+\textsf{FIDL} de l'application. Ce mod\`ele peut provenir de
+diff\'erentes sources sous r\'eserve de disposer d'une extension
+sp\'ecifique au langage utilis\'e pour d\'ecrire le mod\`ele
+FIDL.  Un mod\`ele FIDL est suppos\'e \^etre exprim\'e sous la
+forme d'une instance du m\'eta-mod\`ele FIDL. La transformation \`a
+partir d'un autre mod\`ele, par exemple, UML, EdoC, Fractal ou autre,
+est une \'etape pr\'ealable. Cette instance peut-\^etre sous
+diff\'erentes formes dont les plus courantes sont :
+\begin{itemize}
+  \item le format \textsf{XMI} qui une repr\'esentation XML d'un
+  mod\`ele ou m\'eta-mod\`ele \textsf{UML} ;
+\item le format \textsf{IDL3} annot\'e, dont le corps respecte la
+  grammaire usuelle des descriptions de composants IDL3 et dont les
+  commentaires peuvent contenir des descriptions de comportement sous
+  la forme d'expressions \textsf{FIDL}. 
+\end{itemize}
+
+Ce mod\`ele constitue l'entr\'ee d'un certain nombre de modules :
+\begin{itemize}
+  \item le contr\^oleur de mod\`ele qui v\'erifie la coh\'erence
+  s\'emantique des mod\`eles, c'est \`a dire les propri\'et\'es
+  de compositionnalit\'e d\'efinies au chapitre
+  \ref{cha:composition} : ind\'ependance des facettes et respect des
+  ports. Le contr\^oleur de mod\`ele v\'erifie aussi la
+  validit\'es des relations de sous-typage entre interfaces et entre
+  composants ;
+\item le g\'en\'erateur de test qui produit des cas de tests
+  statiques abstraits \`a partir des descriptions comportementales
+  d'un composant et d'objectifs de couverture ;
+\item le g\'en\'erateur de testeur qui produit un testeur dynamique,
+  c'est \`a dire un programme ex\'ecutable testant dynamiquement
+  selon les algorithmes pr\'esent\'es dans le chapitre
+  pr\'ec\'edent un ou plusieurs composants ;
+\item un d\'eployeur qui, \`a partir d'un mod\`ele et d'une
+  implantation dans une ou plusieurs plate-formes sp\'ecifiques est
+  capable de lier un testeur et  un composant r\'eel. 
+\end{itemize}
+
+\subsection{D\'eploiement \& Ex\'ecution}
+
+Le d\'eploiement d'un composant r\'eel est une op\'eration
+d\'ependant du medium de communication et de la structure du
+composant lui-m\^eme. Par d\'eploiement, on
+entend la construction d'un environnement permettant \`a un testeur
+et \`a un composant de communiquer. Le r\^ole du d\'eployeur est
+\`a l'ex\'ecution de traduire les messages entre le formalisme
+\textsf{FIDL} et le protocole effectif utilis\'e par le composant
+test\'e.
+
+Un d\'eployeur est configur\'e d'une part par le mod\`ele
+d'ex\'ecution du composant, d'autre part par un mod\`ele de
+communication. Le mod\`ele d'ex\'ecution d\'efinit comment est
+suppos\'e s'ex\'ecuter le composant r\'eel. Dans le cas le plus
+simple, il n'y a rien \`a faire : le composant est d\'ej\`a
+d\'eploy\'e par ailleurs et seule la communication doit \^etre
+prise en charge. Dans d'autre cas (CCM, EJB, WebApps), un contexte
+d'ex\'ecution simul\'e totalement ou partiellement doit \^etre mis
+en place. 
+
+Le mod\`ele de communication d\'efinit concr\`etement comment
+transformer les messages entre le composant et le testeur. En fonction
+de la configuration choisie, le d\'eployeur met en place un canal de
+communication par port du composant \`a tester, c'est \`a dire par
+port identifi\'e dans le mod\`ele \textsf{FIDL}. Il n'est pas
+n\'ecessaire que tous les ports communiquent selon un m\^eme
+protocole. Un composant peut par exemple communiquer sous la forme
+d'appels de m\'ethodes classiques en  \textsf{Java} et  par ailleurs
+sous la forme de flux dans des fichiers selon un mod\`ele
+\textsf{UNIX}. Une autre configuration courante est celle d'un
+composant Web communiquant avec un client dans un protocole
+\textsf{HTTP} et avec un serveur en appels de m\'ethodes. 
+
+Les protocoles pris en charge par le prototype sont :
+\begin{itemize}
+  \item l'appel de m\'ethode local (dans une m\^eme \textsf{JVM}) ;
+  \item l'appel de m\'ethode distant par \textsf{RMI},
+    \textsf{XML-RPC} ou \textsf{SOAP} ;
+  \item l'\'echanges de donn\'ees dans des formulaires \textsf{HTTP},
+    soit directement par g\'en\'eration de requ\^etes/r\'eponses
+    HTTP 1.1, soit par construction de requ\^etes/r\'eponses dans un
+    contexte de \emph{Servlets}.
+\end{itemize}
+
+Les mod\`eles d'ex\'ecution pris en charge sont :
+\begin{itemize}
+  \item composants \textsf{POJO} ;
+  \item composants \textsf{OpenCCM} ;
+  \item composants \textsf{J2EE} : \emph{Servlets} et \textsf{EJB}.
+\end{itemize}
+
+\subsection{V\'erifications}
+
+L'outil de v\'erification effectue donc un certain nombre de
+contr\^oles sur le ou les mod\`eles FIDL qui lui sont fournis. Les
+v\'erification syntaxiques et de bonne formation des expressions sont
+r\'ealis\'ees \`a la vol\'ee par l'analyseur syntaxique \`a
+partir d'un descripteur \textsf{IDL3}. Un mod\`ele \textsf{FIDL} en
+m\'emoire est suppos\'e correctement form\'e, au sens de
+\ref{def:automate-bien-forme}. 
+
+Dans l'\'etat actuel du prototype, toutes les v\'erifications sont
+effectu\'ees sur une version simplifi\'ee du langage des composants
+et des interfaces. Ce langage simplifi\'e ignore les contraintes et
+distingue uniquement les valeurs litt\'erales et les variables,
+d\'enot\'ees par leur type. La premi\`ere \'etape de
+v\'erification consiste en la construction des langages des
+diff\'erents objets, selon les d\'efinitions du chapitre
+\ref{cha:composition} : langages d'interfaces, langages de composants,
+langages d'assemblages. 
+
+Les v\'erifications r\'ealis\'ees sont donc :
+\begin{itemize}
+  \item pour les interfaces dans une relation d'h\'eritage, la
+    v\'erification de l'h\'eritage comportemental au sens de
+    \ref{sec:heritage-comportemental} ;
+  \item pour les composants et assemblages :
+    \begin{itemize}
+      \item la v\'erification du respect des facettes et r\'eceptacles
+        ;
+      \item la v\'erification de l'ind\'ependance des facettes et des
+        puits (sur les alphabets abstraits) ;
+      \item \'eventuellement le respect de l'h\'eritage comportemental
+        lorsqu'une relation d'h\'eritage explicite est donn\'ee.
+    \end{itemize}
+\end{itemize}
+
+La relation contractuelle peut aussi \^etre v\'erifi\'ee
+explicitement entre deux composants ou assemblages. 
+
+\subsection{Test}
+
+Les tests \`a partir de mod\`eles \textsf{FIDL} peuvent \^etre
+r\'ealis\'es selon deux modalit\'es :
+\begin{itemize}
+  \item traditionnelle : un certain nombre de cas de
+  test sont g\'en\'er\'es, puis ensuite ex\'ecut\'es en tant que
+  cas de test \textsf{JUnit} ;
+\item dynamique : un testeur implantant l'interface
+  \textsf{TestRunner} de \textsf{JUnit} ex\'ecute des tests de
+  mani\`ere adaptative en fonction des r\'eponses re\c{c}ues depuis
+  l'\textsf{IUT} et selon les strat\'egies d\'efinies dans le
+  chapitre \ref{cha:selection-des-cas}.
+\end{itemize}
+
+Dans ce second cas de figure, l'int\'egration avec JUnit se fait en
+consid\'erant que toute op\'eration de \texttt{reset} signale une
+fin de test unitaire r\'eussi qui est donc indiqu\'ee comme tel au
+framework \textsf{JUnit}.
+
+\subsection{Couverture de code}
+
+Le test \`a partir d'un mod\`ele \textsf{FIDL} peut \^etre
+\'evidemment coupl\'e avec une analyse de la couverture du code du
+composant r\'eel lorsque celui-ci est disponible localement. Cette
+information est extr\^emement int\'eressante puisqu'elle permet de
+savoir quelle fraction du code d\'evelopp\'e est couverte par la
+sp\'ecification mod\'elis\'ee ou de mani\`ere \'equivalente quel
+partie de la sp\'ecification est r\'eellement ex\'ecutable dans le
+code. 
+
+\subsection{Granularit\'e du test}
+
+Le principal int\'er\^et du mod\`ele d'architectures que nous avons
+propos\'e est de permettre de tester \`a partir du m\^eme outil et
+de fa\c{c}on syst\'ematique les fonctionnalit\'es d'un ensemble de
+composants produisant un syst\`eme par assemblage. Selon les choix
+fait dans le processus de d\'eveloppement et le degr\'e de
+pr\'ecision de la mod\'elisation, les tests pourront \^etre
+r\'ealis\'es \`a diff\'erents niveaux. 
+
+Dans le cas le plus simple, seul un sous-syst\`eme complet, par exemple un
+cas d'utilisation dans l'exemple de la m\'ethodolgie pr\'esent\'ee
+au chapitre \ref{cha:proc-de-devol}, sera mod\'elis\'e de mani\`ere
+formelle en utilisant des sp\'ecifications \textsf{FIDL}. \`A partir
+de cette mod\`elisation on produira alors un  testeur syst\`eme
+dont les connexions seront instanci\'ees avec les protocoles les plus
+externes de l'application consid\'er\'ee. 
+
+Dans le cas id\'eal, chaque composant de chaque couche de
+l'application sera mod\'elis\'e et sp\'ecifi\'e sous la forme d'un
+composant FIDL, l'ensemble \'etant organis\'e sou forme d'assemblage
+hi\'erarchique. Les propri\'et\'es que nous avons d\'emontr\'ees
+dans les chapitres pr\'ecedents permmettront d'all\'eger l'effort de
+test d'int\'egration : la v\'erification du respect des contrats par
+les composants garantit par la suite la correction de l'assemblage.
+
+\section{Exemple}
+
+
+
+\section{Outillage}
+
+La majeure partie des mod\`eles et algorithmes d\'efinis dans les
+chapitres pr\'ec\'edent a \'et\'e implant\'ee sous la forme de
+biblioth\`eques et de programme \textsf{Java} destin\'es \`a
+s'int\'egrer dans un processus de d\'eveloppement et
+d'int\'egration continue. Nous pr\'esentons ici sommairement chacun
+de ces composants. 
+
+
+
+Strat\'egie g\'en\'erale : pas de plateforme unique (eg. Eclipse)
+faisant tout, processus souple et agile, ind\'ependant technologie :
+mod\`ele UniX : un ensemble de petits outils qui font chacun une
+chose et le font bien. ID : extrapolation du mod\`ele de flux texte
+Unix au flux arborescents/graphes (textutils), production de scripts
+de transformation/manipulation de mod\`eles (cf. travaux autour de
+QVT, transformation de mod\`eles, MDA, MDE, ...)
+
+production de mod\`eles testables : m\'eta-mod\`eles bas\'es sur
+une architecture de composants, extractions de mod\`eles \`a partir
+d'existant (approche Hood), transformations de mod\`eles existants :
+mod\`eles de classes UML avec st\'er\'eotypes, mod\`eles de
+composants, mod\`eles AADL, ...format pivot = IDL3/FIDL
+
+partie dynamique : lien entre diff\'erents mod\`eles \`a base de
+syst\`emes de transitions d'\'etats finis : mod\`ele FIDL
+repr\'esente une approximation pessimiste et v\'erifiable du
+comportement r\'eel.  Lien avec IOLTS (LOTOS) et EFSM
+(Statecharts). Voir liens avec OCL : description des contraintes. 
+
+liaison avec le code : PSM : couche de projection entre les mod\`eles
+de composants et les mod\`eles concrets. rester le + longtemps
+possible dans les couches abstraites. 
+
+Mod\`ele de composant
+utilis\'e \`a la fois pour v\'erification et pour d\'eploiement :
+production de descripteurs automatiques, g\'en\'eration de code
+d'interfaces/stubs/squelettes/souches/...
+
+V\'erification existant vs. projection (cf chapitre 1, conclusion) :
+ex. Macker, v\'erification de contraintes architecturales \`a partir
+des r\`egles de projection : permet d'utiliser le m\^eme formalisme
+et les m\^emes jeu de r\`egles pour produire du code et pour
+v\'erifier du code existant. 
+
+Int\'egration dans le processus de d\'eveloppement : versionning de
+mod\`ele/code g\'en\'er\'e et enrichi. Pb: distinguer les parties
+g\'en\'er\'ees des parties \'ecrites, maintenir la coh\'erence
+entre les mod\`eles et le code source. Utilisation de balises, diff,
+syst\`eme standard de gestion de version, r\'econciliation (merge) :
+\'evolution parall\`ele des mod\`eles et du code. 
+
+R\'ef\'erentiel de mod\`eles : modfact, mdr, emfcore. Outil central
+pour le d\'eveloppement.
+
+Ex\'ecution des tests : g\'en\'eration de testeurs sp\'ecifiques
+au d\'eploiement. Production de connecteurs ad-hoc en fonction de la
+plateforme cible : les tests sont g\'en\'eriquement ex\'ecut\'es
+et transform\'es \`a la vol\'ee en fonction de la cible. (exemple :
+OpenCCM, Java). Connecteurs entre deux techno : Java <-> Http ? Java
+<-> OpenCCM, OpenCCM <-> .Net, ....
+
+Couverture / Fiabilit\'e des tests : d\'efinition d'une strat\'egie
+adaptative en fonction des risques, possibilit\'e d'atteindre 100\%
+dans certains cas, mod\`ele g\'en\'erique de couverture applicable
+\`a n'importe quel syst\`eme de transition. 
+
+Strat\'egie de test d'architecture : diminuer l'int\'er\^et du test
+d'int\'egration en accroissant la qualit\'e et la fiabilit\'e des
+tests unitaires (test de conformit\'e, test d'ind\'ependance, test
+de r\'esilience). Utiliser diff\'erents niveaux de description
+d'architecture : strat\'egie risque/rentabilit\'e, optimiser le
+nombre de tests et les temps d'ex\'ecution sur les \'el\'ements les
+plus strat\'egiques (voir en fonction de la complexit\'e des
+automates, mesure du nombre cyclomatique : choisir d'abord les
+sp\'ecifications les plus complexes ou leur allouer plus de temps
+d'ex\'ecution que les autres voir mesure de la fiabilit\'e en
+fonction du temps CPU de Musa\cite{musa-theory-sr}
+
+Objectif g\'en\'eral : accroissement  de la fiabilit\'e => mesure
+\`a partir des anomalies remont\'ees en TMA (hors demande
+d'\'evolutions) : n\'ecessite de faire une \'etude sur l'impact du
+test architectural sur la fiabilit\'e g\'en\'erale : analyse des
+erreurs d\'etect\'ees par le test avant recette et des erreurs
+r\'ev\'el\'ees en recette (historique des erreurs :
+traceabilit\'e, cas de test).
+
+\section{M\'ethodes \& Outils pour les architectures de composants}
+
+\section{Pratique du test de composants \textsf{FIDL}}
+
+\subsection{La plateforme de test \textsf{FIDL}}
+
+Analyse de mod\`ele FIDL : v\'erifications  de base (syntaxe,
+s\'emantique : projections sur alphabets abstraits, ind\'ependance,
+....)
+
+G\'en\'eration de cas de test
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "these"
+%%% TeX-master: "these"
+%%% End: 
+  

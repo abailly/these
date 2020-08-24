@@ -1,0 +1,1009 @@
+
+Nous pr\'esentons dans cette section la syntaxe et la s\'emantique du
+langage utilis\'e --- par d\'efaut --- pour la d\'efinition de fonctions
+dans les sp\'ecifications \textsf{FIDL}. Ce langage, d\'enomm\'e \textsf{Jaskell}
+est une version simplifi\'ee du langage \textsf{Haskell98}, un langage
+fonctionnel \`a \'evaluation paresseuse issu de \textsf{ML}. 
+
+La premi\`ere partie explicite les raisons qui nous ont pouss\'e \`a choisir
+un tel langage pour l'int\'egrer dans les sp\'ecifications \textsf{FIDL},
+la seconde d\'etaille la syntaxe du langage et ses liens avec les
+structures \textsf{IDL3} et \textsf{FIDL} et la troisi\`eme en pr\'ecise
+la s\'emantique eu \'egard \`a celle des ensembles de traces. 
+
+\subsection{Motivation}
+
+\textsf{Jaskell} est n\'e du besoin d'exprimer des relations entre les
+contenus des messages pr\'esents dans les sp\'ecifications FIDL et de
+construire ce m\^eme contenu, afin d'obtenir une sp\'ecification la plus
+d\'etaill\'ee possible des interactions d'un composant avec son
+environnement. Ce langage devait nous permettre, entre autre choses, de :
+\begin{itemize}
+  \item exprimer des op\'erations arithm\'etiques et math\'ematiques
+  usuelles sur diff\'erents types de nombres, entiers et flottants ; 
+\item manipuler des structures de donn\'ees standard telle que les
+  listes ou les structures ;
+\item fournir un niveau de langage suffisamment abstrait pour \'eviter
+  d'emp\^etrer l'utilisateur dans des d\'etails d'implantation.
+\end{itemize}
+
+Plut\^ot que de d\'efinir un langage propre, nous avons choisi
+d'adopter un langage fonctionnel existant, moyennant quelques
+adaptations et une substantielle r\'eduction de la puissance du
+langage, en l'occurence \textsf{Haskell}. Nous avons en effet \'etait
+int\'eress\'e par une caract\'eristique fondamentale de ce langage,
+l'\emph{\'evaluation paresseuse} des expressions, qui pr\'esente la particularit\'e
+de permettre l'\'ecriture et l'\'evaluation de structures ou de
+comportements potentiellement infinis, ainsi que par certains aspects
+mineurs de la syntaxe tels que les listes par compr\'ehension ou le
+filtrage des param\`etres par motifs --- \emph{pattern-matching}. 
+
+Notre principal argument est que cette expressivit\'e fournie par le
+langage doit permettre de d\'efinir des fonctions de haut-niveau de
+mani\`ere simple et essentiellement abstraite, un aspect essentiel pour
+faciliter l'adoption d'un syst\`eme de sp\'ecification formel. On trouvera
+dans \cite{finfunc} un expos\'e saisissant sur les potentialit\'es d'un
+langage comme \textsf{Haskell}.
+
+\subsubsection{Aper\c{c}u}
+
+Le lecteur familier d'\textsf{Haskell98} ou ayant lu les
+sp\'ecifications du langage dans \cite{h98report} souhaitera peut-\^etre
+savoir quelles sont les \'el\'ements de ce langage que l'on ne retrouve
+pas dans \textsf{Jaskell}. En voici donc une liste non exhaustive :
+\begin{itemize}
+  \item le syst\`eme de type complexe a disparu, les types manipul\'es par
+  \textsf{Jaskell} \'etant les types d\'efinis par le langage \textsf{IDL}
+  ;
+\item les espaces de nommage sont aussi fournis par les constructions
+  de l'\textsf{IDL3}, ce qui implique d'ailleurs l'existence d'espace
+  de nommage hi\'erarchique. Les notions d'importation et d'exportation
+  du syst\`eme de \emph{modules} ont aussi disparu ;
+\item la notion de \emph{monade} n'est pas utilis\'ee car le langage est
+  libre de tout effet de bord ;
+\item le filtrage de motif a \'et\'e simplifi\'e par suppression des motifs
+  de successeur --- \texttt{n + k} ---, des motifs \texttt{\@} et des
+  motifs irr\'efutables.
+\end{itemize}
+
+\subsection{Syst\`eme de types}
+
+Chaque expression du langage \textsf{Jaskell} re\c{c}oit un type qui
+peut \^etre soit explicitement d\'eclar\'e --- par exemple dans la
+section \texttt{headers} --- d'une d\'eclaration \textsf{FIDL}, soit
+inf\'er\'e lors de la phase de v\'erification des types. Nous
+donnons ici une d\'efinition des types utilis\'es dans
+\textsf{Jaskell} ainsi que de la relation de sous-typage ---
+not\'ee $\sqsubseteq$ --- utilis\'ee pour la surcharge des
+fonctions. 
+
+\begin{definition}[Expression de types]
+Une \emph{expression de type} ou un \emph{type} est construit selon les r\`egles
+suivantes :
+\begin{itemize}
+  \item \textbf{Primitives.} $\mathtt{Bool},\mathtt{Char},\mathtt{Int},\mathtt{Long},\mathtt{Float},\mathtt{Double},\mathtt{String}$ sont des types ;
+\item \textbf{Variables.} \'etant donn\'e un ensemble d\'enombrable
+  de noms de variables $TV$, $x$ est un type, pour tout $x$ dans $TV$
+  ;
+\item \textbf{Listes.} pour tout type $T$, $[T]$ est un type ;
+\item \textbf{Tuples.} pour tout ensemble de type $T_1,T_2, \dots,
+  T_n$, $(T_1,T_2,\dots,T_n)$ est un type ;
+\item \textbf{Structures.} pour tout ensemble de type $T_1,T_2, \dots,
+  T_n$ et tout ensemble de noms $n_1,n_2,\dots,n_n$ tel que $\forall
+  i,j, n_i\neq n_j$, $\{n_1 : T_1,n_2 :
+  T_2,\dots,n_n : T_n\}$ est un type ;
+\item \textbf{Fonctions.} pour tous types $T_1,T_2$, $T_1 \rightarrow
+  T_2$ est un type.
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Sous-typage]
+\'Etant donn\'e deux types $T_1$ et $T_2$, on d\'efinit
+inductivement la relation de \emph{sous-typage} entre les deux types,
+not\'ee $T_1\sqsubseteq T_2$ par les r\`egles suivantes :
+\begin{itemize}
+  \item si $T_1 = T_2$ alors  $T_1 \sqsubseteq T_2$ ;
+  \item si $T_2 \in TV$ alors $T_1 \sqsubseteq T_2$ ;
+  \item si $T_1 = [T_1'], T_2=[T-2'], T_1' \sqsubseteq T_2'$ alors $T_1
+  \sqsubseteq T_2$;
+\item si $T_1 = (t_1,t_2,\dots,t_n), T_2=(q_1,q_2,\dots,q_n),
+  \forall i, 1\leq i \leq n, t_i\sqsubseteq q_i$ alors  $T_1
+  \sqsubseteq T_2$ ;
+\item si $T_1 = \{n_1:t_1,n_2:t_2,\dots,n_n:t_n\}, T_2=\{m_1:q_1,m_2:q_2,\dots,m_n:q_n\},
+  \forall i, 1\leq i \leq n, t_i\sqsubseteq q_i$ alors  $T_1
+  \sqsubseteq T_2$ ;
+\item si $T_1 = t_1 \rightarrow t_2, T_2 = q_1 \rightarrow q_2, t_1
+  \sqsubseteq q_1, q_2 \sqsubseteq t_2$ alors $T_1
+  \sqsubseteq T_2$ ;
+\end{itemize}
+De plus, il existe une relation de sous-typage entre les types
+primitifs d\'efinis ci-dessus :
+$$
+\mathtt{Char}\sqsubseteq\mathtt{Int}\sqsubseteq\mathtt{Long}\sqsubseteq\mathtt{Float}\sqsubseteq\mathtt{Double}
+$$
+\end{definition}
+
+\begin{definition}[Inf\'erence de type]
+
+\end{definition}
+
+\newlength{\oldwidth}
+\newenvironment{mytab}{\setlength{\oldwidth}{\linewidth}
+  \setlength{\linewidth}{.75\linewidth}\begin{tabbing}}{\end{tabbing}\setlength{\linewidth}{\oldwidth}}
+
+\openout15=jaskellcore-to-java.aux
+
+\def\rulelabel#1{\immediate\write1{\string\newlabel{#1}{{r\therulescount}{\the\count0}}}}
+\def\ruleref#1{[\ref{#1}]}
+
+\lstset{language=Java}
+
+
+\section{Jaskell-Core}
+
+Le langage Jaskell-Core est un langage minimal pr\'eservant la
+s\'emantique des constructions de Jaskell tout en enlevant le sucre
+syntaxique et en ajoutant des informations de typage. Nous pr\'esentons
+ici la syntaxe de ce langage. 
+
+\newcounter{rulescount}
+\setcounter{rulescount}{1}
+\newcommand{\incrules}{\hfill[r\therulescount]\addtocounter{rulescount}{1}}
+
+\begin{mytab}
+\emph{jaskell-part} \= \twocol= \=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\=\kill
+\emph{jaskell} \>\twocol=\> [ \emph{module-decl} ] [ \emph{decl} \texttt{=} \emph{exp} ]$^*$ \rulelabel{prog}\`{\i}ncrules \\
+\emph{module-decl}\>\twocol=\> \texttt{module} \emph{qualified-name}
+\rulelabel{module}\`{\i}ncrules \\ 
+\emph{decl}\>\twocol=\> \emph{identifier} \texttt{\twocol}
+\emph{type} \rulelabel{topdecl} \`{\i}ncrules \\
+\emph{type} \>\twocol=\> \emph{simple-type} \rulelabel{type} \`{\i}ncrules
+ \\
+\> $\mid$ \> \emph{type} \texttt{->} \emph{simple-type} \rulelabel{arrowtype}  \`{\i}ncrules
+ \\
+\emph{simple-type} \>\twocol=\> \emph{qualified-name} [ \emph{type} ]$^*$  \rulelabel{namedtype} \`{\i}ncrules \\
+\> $\mid$ \>  \emph{primitive-type}  \rulelabel{primtype} \`{\i}ncrules \\
+\> $\mid$ \> \texttt{[} \emph{type} \texttt{]}  \rulelabel{listtype} \`{\i}ncrules \\
+\emph{primitive-type} \>\twocol=\> \texttt{Int} $\mid$ \texttt{Float}
+$\mid$ \texttt{Double} $\mid$ \texttt{Bool} $\mid$ \texttt{Char} $\mid$ \texttt{String}\\
+\end{mytab}
+
+Un source Jaskell est compos\'e d'une succession de d\'efinitions. Ces
+d\'efinitions peuvent \'eventuellement \^etre mutuellement r\'ecursives. 
+
+Toutes les d\'efinitions sont compos\'ees d'un identifiant, d'un type
+valide attach\'e \`a cet identifiant et d'une expression en 
+partie droite \rem{La v\'erification de type ayant d\'ej\`a normalement \'et\'e
+  effectu\'ee, le type d'un identifiant sera suppos\'e consistant avec sa
+  d\'efinition.}. Les types valides sont construits \`a partir de types 
+simples par application de \texttt{->} et \texttt{[]}. Les types
+aggr\'egats sont d\'efinis par un nom --- qualifi\'e --- de type et une
+liste de types des composants. \rem{Il conviendrait de d\'efinir une
+  projection des constructions de types IDL vers Jaskell.}
+
+\begin{mytab}
+\emph{binding} \= \twocol= \=aaa\=aaa\=aaa\=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\=\kill
+\emph{binding} \>\twocol=\> \emph{identifier} 
+\texttt{\twocol} \emph{type} \`\`{\i}ncrules \\
+\emph{exp} \>\twocol=\>  \texttt{case} \emph{exp} \texttt{of}
+\emph{binding} \texttt{\{}
+\emph{alts} \texttt{\}}  \rulelabel{case} \`{\i}ncrules \\
+\> $\mid$ \> \emph{exp}  \emph{base-exp}  \rulelabel{application} \`{\i}ncrules \\
+\> $\mid$ \> $\lambda$ \emph{binding} [ \emph{binding} ]$^*$
+\texttt{->} \emph{exp}   \rulelabel{abstraction} \`{\i}ncrules \\
+\> $\mid$ \>  \`{\i}ncrules \\
+\end{mytab}
+
+Une expression est soit :
+\begin{itemize}
+  \item une alternative introduite par \texttt{case} ;
+  \item une application ;
+  \item une abstraction.
+\end{itemize}
+L'abstraction a pour effet de lier les variables identifi\'ees dans
+l'expression en partie droite. L'identifiant apparaissant apr\`es
+\texttt{of} dans l'expression de branchement a pour effet de lier la
+variable dans toutes les alternatives de l'expression. \rem{Cette
+  construction est introduite pour tenir compte des @-patterns.}
+
+\begin{mytab}
+\emph{jaskell-part} \= \twocol= \=aaa\=aaa\=aaa\=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\=\kill
+\emph{alts} \>\twocol=\>  \emph{alt}  \texttt{;} \emph{alts} \`{\i}ncrules \\
+\> $\mid$ \> \emph{default-alt}\`{\i}ncrules \\
+\emph{alt} \>\twocol=\> \emph{pat} \texttt{->} \emph{exp} \`{\i}ncrules \\
+\emph{pat}  \>\twocol=\> \emph{litteral} \`{\i}ncrules \\
+\> $\mid$ \> \emph{binding} \`{\i}ncrules \\
+\> $\mid$ \> \emph{qualified-name} [ \emph{pat}  ]$^*$ \`{\i}ncrules \\
+\> $\mid$ \> \texttt{(:)} \emph{pat} \emph{pat} \`{\i}ncrules \\
+\> $\mid$ \> \texttt{[]} \`{\i}ncrules \\
+\emph{default-alt} \>\twocol=\> \texttt{\_} \texttt{->} \emph{exp} \`{\i}ncrules \\
+\end{mytab}
+
+Une alternative introduisant une variable a pour effet de lier cette
+variable dans l'expression en partie droite. Une alternative
+construite sur un type doit contenir le m\^eme nombre de membres que
+dans la d\'efinition du type. On notera qu'une alternative doit toujours
+contenir un choix par d\'efaut dont l'expression sera \'evalu\'ee si aucun
+autre choix ne s'applique. \rem{Les r\`egles concernant les pattern de
+  listes permettent d'envisager une unification future avec les r\`egles
+  pour les types aggr\'egats.}
+
+\begin{mytab}
+\emph{jaskell-part} \= \twocol= \=aaa\=aaa\=aaa\=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\=\kill
+\emph{base-exp}\>\twocol=\> \emph{qualified-name} \rulelabel{qualref}
+\`{\i}ncrules \\
+\> $\mid$ \> \emph{identifier} \rulelabel{idref} \`{\i}ncrules \\
+\> $\mid$ \> \texttt{[]} \rulelabel{emptylist} \`{\i}ncrules \\
+\> $\mid$ \> \emph{literal} \rulelabel{literal} \`{\i}ncrules \\
+\> $\mid$ \> \texttt{(} \emph{exp} \texttt{)} \rulelabel{groupexp} \`{\i}ncrules \\
+\> $\mid$ \> \texttt{(:)} \rulelabel{cons} \`{\i}ncrules \\
+\end{mytab}
+
+
+\begin{mytab}
+\emph{jaskell-part}aaaaaa \= \twocol= \=aaa\=aaa\=aaa\=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\=\kill
+\emph{qualified-name}  \>\twocol=\>  [ \emph{name}\texttt{.}
+]$^*$ identifier   \rulelabel{qualname} \`{\i}ncrules \\
+\emph{identifier}  \>\twocol=\>  \emph{name}  \rulelabel{simpleid} \`{\i}ncrules \\
+\> $\mid$ \> \texttt{(} \emph{operator} \texttt{)}   \rulelabel{opid} \`{\i}ncrules\\
+\emph{name}  \>\twocol=\>  [ a..z A..Z] [ a..z A..Z \_ ]$^*$  \\
+\emph{operator}  \>\twocol=\> \emph{symbol} [ \emph{symbol} ]$^*$  \\
+\emph{symbol}   \>\twocol=\>  \verb+!+ $\mid$ \verb+#+ $\mid$ \verb+$+ $\mid$ \verb+%+ $\mid$ \verb+&+ $\mid$ \verb+*+ $\mid$ \verb\textdegree{}+\textdegree{} $\mid$ \verb+.+ \\
+\>\> $\mid$ \verb+/+ $\mid$ \verb+<+ $\mid$ \verb+=+ $\mid$ \verb+>+
+$\mid$ \verb+?+ $\mid$ \verb+@+ $\mid$ \verb+\+ $\mid$ \verb+^+ $\mid$
+\verb+-+ $\mid$ \verb+~+ \\ 
+\end{mytab}
+
+Un \emph{qualified-name} d\'efinit un identifiant par son chemin depuis
+le contexte racine vers l'espace de nommage dans lequel il est
+d\'eclar\'e. Un \emph{operator} doit normalement pouvoir \^etre utilis\'e de
+mani\`ere infixe. Dans Jaskell-Core, tous les symboles de fonctions se
+trouvent en position fonctionnelle, donc pr\'efixe ; pour les
+op\'erateurs, cela implique de les distinguer \`a l'aide des parenth\`eses,
+ce qui est par ailleurs consistant avec la pratique usuelle en Haskell.
+
+\section{Transformation}
+
+Notre objectif est de transformer un programme Jaskell-Core en un
+programme binaire \'equivalent susceptible d'\^etre ex\'ecut\'e sur une machine
+virtuelle \textsf{Java}. Pour ce faire, nous allons d\'efinir pour
+chaque r\`egle syntaxique une r\`egle de transformation vers du code-octet
+sous la forme d'une suite d'octets respectant le format
+\texttt{.class} d\'efinit par Sun. 
+
+\subsection{Programme}
+
+
+La r\`egle  \ruleref{prog} produit en premier lieu l'ouverture --- la
+cr\'eation --- d'une classe appel\'ee \emph{classe courante}  destin\'ee \`a contenir l'ensemble
+des d\'eclarations subs\'equentes. 
+
+\subsubsection{Modules}
+
+Si les d\'efinitions sont pr\'ec\'ed\'ees d'une d\'eclaration de module (r\`egle
+\ruleref{module}), la classe courante prend le nom du module et
+appartient \'eventuellement \`a un package si le nom qualifi\'e du module
+est un chemin (\emph{cf.} infra). Dans le cas contraire, la classe
+courante est la classe appel\'ee \texttt{Main}. 
+
+Plusieurs d\'eclarations de modules peuvent \^etre rencontr\'ees dans un
+source Jaskell-Core. Dans ce cas, chaque d\'eclaration modifie la classe
+courante qui reste en vigueur jusqu'\`a la prochaine d\'eclaration
+\emph{module} ou jusqu'\`a la fin du code source. 
+
+\subsubsection{D\'eclarations}
+
+Les r\`egles \ruleref{prog} et \ruleref{topdecl} d\'efinissent un programme
+Jaskell comme une suite de \emph{d\'efinitions} contenant une
+d\'eclaration d'identifiant et une d\'efinition. 
+
+\subsubsection{Transformation des noms qualifi\'es et identifiants} 
+\label{sec:transform-id}
+L'espace de noms autoris\'e \'etant plus grand dans Jaskell qu'en Java, il
+convient de d\'efinir une r\`egle d'encodage des-dits noms. Cette
+transformation, d\'esign\'ee par la suite comme la fonction $\tau : String
+\rightarrow String$ ob\'eit aux r\`egles suivantes :
+\begin{enumerate}
+  \item les lettres \texttt{a-Z}, \texttt{A-Z}, les chiffres
+    \texttt{0-9}, le soulign\'e \texttt{\_}, le symbole \texttt{\$}
+    conservent leur valeur initiale ;
+  \item les points s\'eparant des parties d'un nom qualifi\'e sont
+    transform\'es en barre oblique \texttt{/} ;
+  \item lorsque la derni\`ere composante d'un nom qualifi\'e correspond \`a
+    un op\'erateur (cf. r\`egle \ruleref{opid}), les parenth\`eses sont
+    supprim\'ees et chaque caract\`ere composant l'op\'erateur sont
+    transform\'es en une cha\^{\i}ne compos\'ee du symbole soulign\'e \texttt{\_}
+    et des deux chiffres hexad\'ecimaux du code du caract\`ere en UTF-8.
+\end{enumerate}
+
+Par exemple, l'identifiant 
+\begin{verbatim}
+MyModule.MyInterface.(..)$(++)
+\end{verbatim}
+correspondant \`a la d\'efinition d'un op\'erateur \texttt{++} dans
+l'environnement d'un op\'erateur \texttt{..} (\emph{i.e.} une
+let-d\'efinition lift\'ee au niveau le plus \'elev\'e), sera transform\'e en
+\begin{verbatim}
+MyModule/MyInterface/_2e_2e$_2b_2b
+\end{verbatim}
+qui est un identifiant Java valide --- quoique peu lisible !
+
+On notera que comme en Java, les s\'eparateurs d'espaces de noms
+\texttt{.} deviennent des \texttt{/} dans le constant pool et
+correspondent \`a des noms de paquetages. 
+
+\section{Optimisations}
+
+Diff\'erentes optimisations peuvent \^etre effectu\'ees sur les programmes
+Jaskell-Core avant g\'en\'eration de code. 
+
+\subsection{Propagation de constantes}
+
+\subsection{Arguments stricts}
+
+L'objectif de cette analyse est de r\'eduire le nombre d'op\'erations
+d'empaquetages et de d\'epaquetages des expressions, donc d'\'eliminer des
+niveaux d'indirections dans la manipulation des donn\'ees. 
+
+\subsection{R\'ecursivit\'e terminale}
+
+\subsection{R\'eutilisation de variables}
+
+
+\subsection{D\'efinition}
+
+Les d\'efinitions introduites par la r\`egle \ruleref{topdecl} produisent
+les transformations suivantes :
+
+L'identifiant li\'e \`a la d\'efinition est tout d'abord converti selon les r\`egles de
+transformation de noms indiqu\'es \`a la section \ref{sec:transform-id},
+puis cet identifiant est utilis\'e pour cr\'eer une \emph{m\'ethode statique }sans param\`etre
+de m\^eme nom dans la classe courante et dont le type de retour d\'epend de la conversion du type de
+la d\'eclaration en Java (\emph{cf.} section \ref{sec:transform-types}).
+C'est une erreur de compilation de d\'efinir deux fois le m\^eme nom dans
+le m\^eme module.
+
+Le corps de la d\'efinition (\emph{i.e.} la partie droite du symbole
+\texttt{=}) est ensuite trait\'e et le code produit devient le code de
+la m\'ethode d\'efinie ci-dessus, suivi d'un code
+\fbox{\texttt{$x$return}} d\'ependant du type de  la d\'efinition.
+
+\subsubsection{Cr\'eation des paquetages} 
+
+Un nom qualifi\'e contenant des s\'eparateurs de paquetage entra\^{\i}ne la
+cr\'eation des paquetages correspondant, c'est-\`a-dire la cr\'eation de
+r\'epertoires imbriqu\'es, chaque r\'epertoire \'etant nomm\'e d'apr\`es les
+composantes successives du nom qualifi\'e. Le r\'epertoire \'eventuellement
+cr\'e\'e devient le nouveau r\'epertoire courant pour la production des
+fichiers \texttt{.class} issus de la transformation du corps de la
+d\'efinition. 
+
+Lorsque la derni\`ere composante du nom qualifi\'e contient un ou
+plusieurs \texttt{\$}, cela indique que l'objet en question d\'esigne
+une d\'efinition $\lambda$-\emph{\'etendue}. 
+
+\subsection{Types}
+\label{sec:transform-types}
+
+Une d\'eclaration $d \twocol T$ entra\^{\i}ne la cr\'eation d'une ou plusieurs
+interfaces d\'erivant de \verb+jaskell.runtime.types.JObject+ selon les
+r\`egles d\'etaill\'ees ci-dessous pour les types fonctions et les autres 
+types. 
+
+\subsubsection{Types fonctions}
+
+Pour une d\'eclaration de type $T$ de la forme  $T_1 \rightarrow T_2 \rightarrow \dots
+\rightarrow T_n$ --- r\`egle \ruleref{arrowtype}, il y a cr\'eation de $n$ nouvelles \emph{interfaces}, une
+pour chaque application partielle possible de la fonction de type
+$T$. Chaque interface $I_i = T_i \rightarrow T_{i+1} \rightarrow \dots
+\rightarrow T_n$ est d\'efinie dans le paquetage
+\verb+jaskell.runtime.types+ avec un nom Java r\'esultant de la
+transformation de la cha\^{\i}ne
+\texttt{jaskell.runtime.types.}$\tau(T_i)$\texttt{->}$\tau(T_{i+1})$\texttt{->}$\dots$\texttt{->}$\tau(T_{n})$
+en un identifiant Java valide (\emph{cf.} section
+\ref{sec:transform-id}. 
+
+Chaque interface h\'erite de l'interface g\'en\'erique \texttt{Abstraction}
+et d\'eclare deux m\'ethodes :
+\begin{itemize}
+  \item une m\'ethode d'application totale \texttt{$T_n$ apply($T_i p_i$,$T_{i+1}
+    p_{i+1}$, $\dots$ , $T_{n-1} p_{n-1}$)}, o\`u chaque $T_i$ est du
+  type de l'argument de la fonction ;
+\item une m\'ethode d'application partielle \texttt{$I_{i+1}$ apply($T_i
+    p_i$)}.
+\end{itemize}
+
+\subsubsection{Types listes}
+
+Si $T$ est de la forme \texttt{[}$T$\texttt{]}, on g\'en\`ere si elle
+n'existe pas une classe \texttt{List\$$T$} dans le paquetage
+\texttt{jaskell.runtime.types.} h\'eritant de la classe
+\texttt{jaskell.runtime.types.List}. Cette classe doit d\'efinir les m\'ethodes
+suivantes :
+\begin{itemize}
+  \item un constructeur \texttt{List\$$T$($T$ t, List l)} ;
+  \item une m\'ethode \texttt{$T$ head()}, qui retourne le premier
+    \'el\'ement de la liste ;
+  \item une m\'ethode \texttt{List$T$ tail()} qui retourne la liste suivant
+    le premier \'el\'ement.
+\end{itemize}
+
+Les m\'ethodes \texttt{head} et \texttt{tail} sont d\'efinies de mani\`ere
+g\'en\'erique dans la classe \texttt{List}  sous le nom \texttt{car} et
+\texttt{cdr}, la premi\`ere retournant un objet de type
+\texttt{JObject}. Les sous-classes de \texttt{List} sont essentiellement
+des encapsulation correctement typ\'ees de la super-classe. Les m\'ethodes
+red\'efinies dans les sous-classes doivent lancer une exception
+\texttt{IllegalArgumentException} si les param\`etres qui leurs sont
+pass\'es ne sont pas corrects, en particulier si les types de listes ne
+correspondent pas dans le constructeur.
+
+\subsubsection{Types utilisateurs}
+
+Dans le mesure o\`u le langage tel que d\'efini ci-dessus et dans les
+documents associ\'es (\cite{fidlspec}) ne permet pas de d\'efinir des types utilisateurs,
+ces types correspondent normalement \`a la projection en Jaskell des
+constructions IDL d\'efinies par ailleurs dans le code source IDL,
+c'est-\`a-dire essentiellement \`a des structures, des \textsf{valuetypes}
+ou des types \'enum\'er\'es. La transformation d'un tel type en Java
+s'effectue simplement en respectant les r\`egles de transformation de
+IDL vers Java (\cite{idl2java}). 
+
+C'est une erreur de compilation d'utiliser un type aggr\'egat non d\'efini
+par ailleurs, c'est-\`a-dire pour lequel le compilateur ne peut associer
+de d\'efinition de classe Java. 
+
+\subsubsection{Types primitifs}
+
+La r\`egle \ruleref{namedtype} inclus aussi les types primitifs de
+Jaskell. Ces types sont d\'efinis dans la biblioth\`eque standard de
+Jaskell (voir \cite{fidlspec}) et sont transpos\'es en Java selon les
+correspondance indiqu\'ees dans le tableau \ref{tab:typemap}.
+
+\begin{table}\
+\caption{R\`egles de projection de types}
+\label{tab:typemap}
+\begin{center}
+\begin{tabular}{|l@{$\qquad\longrightarrow\qquad$}l|}
+\hline
+Jaskell type & Java type \\
+\hline
+\hline
+\texttt{Bool} & \texttt{boolean} \\
+\hline
+\texttt{String} & \texttt{java.lang.String} \\
+\hline
+\texttt{Int} & \texttt{int} \\
+\hline
+\texttt{Integer} & \texttt{java.math.BigInteger} \\
+\hline
+\texttt{Float} & \texttt{float} \\
+\hline
+\texttt{Double} & \texttt{double} \\
+\hline
+\texttt{Char} & \texttt{int} \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\section{Expressions}
+
+La transformation des expressions du langage Jaskell a pour r\'esultat
+de produire du code-octet Java. Ce code-octet est \'eventuellement
+aggreg\'e au code produit par d'autres expressions pour produire une
+\emph{s\'equence} de code-octet, dans le but de d\'efinir le code
+correspondant \`a une d\'efinition du programme. 
+
+\subsection{Empaquetage - D\'epaquetage}
+
+Tous les \og objets \fg~ manipul\'es par le code-octet Java sont soit
+des types primitifs Java, soit des objets d'une classe d\'erivant de la
+classe \texttt{jaskell.runtime.types.JObject} (\emph{cf.} la section
+\ref{sec:runtime} consacr\'ee au support \`a l'ex\'ecution). La classe
+\texttt{JObject} d\'efinit une seule m\'ethode qui est \texttt{JObject
+  eval()}  qui par d\'efaut retourne l'objet lui-m\^eme et des m\'ethodes 
+\texttt{T evalAsT()} pour chacun des types primitifs dont
+l'implantation par d\'efaut et de lancer une exception d'ex\'ecution de type
+\texttt{IllegalStateException}. Ce m\'ecanisme permet de manipuler
+indiff\'erement des valeurs r\'eelles et des valeurs potentielles,
+c'est-\`a-dire non encore \'evalu\'ees, et donc d'implanter la convention
+d'\emph{\'evaluation paresseuse} standard d'Haskell.
+
+Toutefois, toutes les fonctions strictes s'attendent \`a recevoir des
+arguments \'evalu\'es d'un correct, notamment en ce qui concerne les
+fonctions arithm\'etiques. Le compilateur doit donc effectuer des
+op\'erations d'empaquetage-d\'epaquetage en fonction des besoins :
+\begin{itemize}
+  \item si une fonction stricte dans un param\`etre $p$ est invoqu\'ee
+    avec une variable stricte $v$ dans la position $p$, la valeur de
+    la variable est consid\'er\'e d\'epaquet\'ee et donc le compilateur la
+    passe telle quelle \`a la fonction ;
+  \item si une fonction stricte dans un param\`etre $p$ est invoqu\'ee
+    avec une expression dans la la position $p$, alors l'expression
+    doit \^etre \'evalu\'ee par invocation de la m\'ethode \texttt{T evalT()}
+    ;
+  \item dans tous les autres cas, l'expression n'est pas \'evalu\'ee.
+\end{itemize}
+
+L'\'emission de l'appel \`a eval() peut \^etre \'eventuellement suivi d'un
+\rem{Ceci  ne peut arriver que si l'on peut d\'eclarer des fonctions
+  strictes.}
+code \texttt{checkcast} afin de convertir un type \texttt{JObject} en un type
+correct pour la fonction. 
+
+\subsection{Atomes}
+
+Les expressions des bases sont : les r\'ef\'erences de variables locales (r\`egle
+\ruleref{idref}) et globales (\ruleref{qualref}), les
+litt\'eraux de types primitifs (r\`egle \ruleref{literal}), la liste vide
+\texttt{[]} (r\`egle  \ruleref{emptylist}) et les \og
+objets \fg construits \`a partir d'autres expressions et d'un
+constructeur de type. Un constructeur de type est un nom qualifi\'e ou
+le constructeur pour les listes \verb+(:)+ (r\`egles \ruleref{qualref}
+et \ruleref{cons}).
+
+Une \emph{r\'ef\'erence locale} entra\^{\i}ne l'\'emission d'un code de
+chargement en fonction du type de la variable et de sa position dans
+la d\'eclaration de la fermeture dont elle fait partie. Si l'on a $x_i :
+T$  \`a la position $i$ dans la d\'eclaration de la fermeture, l'index de
+chargement est \'egal \`a $i+1$. \rem{Le d\'eplacement de 1 permet de tenir
+  compte du pointeur \texttt{this}.} Les r\`egles usuelles du code-octet
+d\'etermine l'instruction de chargement \textsl{x}\texttt{load} \`a
+utiliser selon que le type est primitif ou non. 
+
+Si $r$ est une \emph{r\'ef\'erence globale} non primitive, alors $i$ d\'esigne l'indice
+dans le \emph{constant pool} de la r\'ef\'erence \`a une m\'ethode statique d\'esign\'ee par $r$
+et on \'emet le code \fbox{\texttt{invokestatic $i$}}. Si $r$ est une
+r\'ef\'erence \`a une fonction primitive, son traitement est report\'e au
+traitement de l'application de cette fonction. 
+
+Un litt\'eral de type primitif entra\^{\i}ne  la g\'en\'eration
+d'une instruction de chargement depuis le constant pool correspondant
+au type de litt\'eral :
+\begin{itemize}
+  \item pour un litt\'eral bool\'een, on produit l'instruction
+    \fbox{\texttt{bipush $v$}} o\`u $v$ vaut 0 pour la valeur bool\'eenne
+    \texttt{false} et 1 pour la valeur bool\'eenne \texttt{true} ;
+  \item pour un litt\'eral num\'erique entier dont la valeur $i$ est comprise
+    entre -1 et 5, on g\'en\`ere une instruction
+    \fbox{\texttt{iconst\_$i$}} ;
+  \item pour un litt\'eral flottant dont la valeur $f$ est 0,1 ou 2, on
+    g\'en\`ere l'instruction \fbox{\texttt{fconst\_$f$}} ;
+  \item pour un litt\'eral double dont la valeur $d$ est 0 ou 1, on
+    g\'en\`ere l'instruction \fbox{\texttt{dconst\_$d$}} ;
+  \item dans les autres cas, $i$ est l'indice dans le constant pool du
+    litt\'eral et on g\'en\`ere une instruction \fbox{\texttt{ldc} $i$} pour
+    un litt\'eral entier, flottant ou cha\^{\i}ne de caract\`ere ; \fbox{\texttt{ldc2\_w} $i$} pour
+    un litt\'eral de type double. 
+\end{itemize}
+
+Une expression de liste vide  \texttt{[]} g\'en\`ere le chargement de la
+constante   \texttt{nil} d\'efinie dans la classe \texttt{List},
+\fbox{\texttt{getstatic $i$}}.
+
+\subsection{Abstractions}
+
+On notera que par convention, en Jaskell-Core toutes les abstractions
+sont pr\'ealablement $\lambda$-\'etendues en fermetures au niveau du module. Il n'y a
+donc pas d'expressions d'abstraction possibles dans le corps d'une
+autre expression.  
+
+Une abstraction induit la cr\'eation d'une nouvelle classe d\'erivant de
+la classe \texttt{jaskell.runtime.types.Closure} et implantant les
+diff\'erentes interfaces correspondant au type de l'abstraction
+(\emph{cf.} section \ref{sec:transform-types}). Cette classe est cr\'e\'ee
+dans le paquetage courant et comme une classe imbriqu\'ee de la
+\emph{classe courante}, son nom est par convention
+\texttt{lambda\$}$i$ o\`u $i$ est un index unique pour la classe
+courante g\'en\'er\'e automatiquement par le compilateur. Cette classe
+devient la \emph{classe courante}.
+
+Pour chaque argument de la fonction \`a l'exception du dernier, on
+g\'en\`ere un champ dans la classe courante dont le nom est celui du
+param\`etre formel de l'abstraction et dont le type est :
+\begin{itemize}
+  \item le type --- Java --- de l'argument si celui-ci est d'un type
+    primitif ;
+  \item  \texttt{JObject} sinon. 
+\end{itemize}
+Ces champs sont destin\'es \`a stocker les r\'esultats d'applications
+partielles de l'abstraction. Le champ \texttt{nargs} d\'efini dans la
+classe \texttt{Closure} est initialis\'e \`a 0 et le champ \texttt{JObject[]
+  args} d\'efini aussi dans \texttt{Closure} est initialis\'e avec un tableau
+d'objets \texttt{JObject} de taille \'egale au nombre d'arguments de la
+fonction moins 1.
+
+Une m\'ethode  \texttt{JObject apply($a_1$, $\dots$ , $a_n$)} est d\'efinie o\`u
+$n$ est le nombre d'arguments formels de la m\'ethode et chaque $a_i$
+est de la forme \texttt{T $n_i$}, avec \texttt{T} le type de
+l'argument : soit \texttt{JObject}, soit un type si la fonction est
+\emph{stricte} dans cet argument. Cette m\'ethode est la m\'ethode
+d'application totale de la fonction.
+
+On cr\'ee ensuite une m\'ethode \texttt{JObject apply(JObject)} d'application
+partielle non-stricte qui va stocker l'objet pass\'e en param\`etre dans
+le tableau \texttt{args} et incr\'ementer \texttt{nargs}. Si le
+param\`etre est le dernier argument de la fonction, on invoque alors la
+m\'ethode d'application totale soit avec les arguments stock\'es dans le
+tableau \texttt{args} pour les arguments non stricts, soit avec les
+arguments stock\'es dans les champs appropri\'es pour les arguments
+stricts. 
+
+Pour chaque argument d'indice strict de la fonction, on cr\'ee une m\'ethode d'application
+partielle stricte \texttt{JObject apply(T)}, o\`u \texttt{T} est le type de
+l'argument, qui stocke l'argument pass\'e en param\`etre dans le champ
+apropri\'e et qui incr\'emente \texttt{nargs}.  Si la fonction a plusieurs
+arguments stricts de m\^eme type, il conviendra de tenir compte de la
+valeur du champ \texttt{nargs} dans le code de la m\'ethode pour
+affecter l'argument au bon champ. Si le param\`etre est le
+dernier param\`etre attendu de la fonction, on appelle la m\'ethode
+d'application totale comme ci-dessus. 
+
+Pour les fonctions ne prenant qu'un seul argument en param\`etre, il
+n'est pas n\'ecessaire de g\'en\'erer toutes les m\'ethodes d\'efinies ci-dessus
+: on g\'en\`ere une seule m\'ethode d'application, \'eventuellement stricte. 
+
+Le corps de l'abstraction est ensuite compil\'e et devient le corps de
+la fonction d'application totale, suivi d'un code de retour
+\fbox{$x$\texttt{return}} correspondant au type de l'abstraction. Une
+fois la classe de l'abstraction g\'en\'er\'ee, on restaure la classe
+courante et on g\'en\`ere le code \fbox{\texttt{new $i$ ; 
+dup ; invokespecial $j$ ;}}, o\`u $i$ est l'indice dans le
+constant pool de la classe de l'abstraction et $j$ celui de la m\'ethode
+d'initialisation de la classe. Ce code est g\'en\'er\'e dans la m\'ethode
+courante. 
+
+\subsection{Applications}
+
+Dans les applications, il convient de distinguer le cas des
+applications de fonctions et des applications de constructeurs
+d'objets. Ces deux cas sont distingu\'es par le type de la r\'ef\'erence $r$
+qui se trouve en position fonctionnelle dans l'application. Si ce type
+est de la forme $A\rightarrow B$, alors il s'agit d'une invocation ;
+sinon il s'agit d'une construction.
+
+Dans le cas des applications fonctionnelles, la compilation effectue
+les \'etapes suivantes :
+\begin{enumerate}
+  \item \'evaluation du terme fonctionnel et g\'en\'eration du code
+    correspondant ; 
+  \item d\'enombrement des arguments de l'application : si ce nombre est
+    inf\'erieur au nombre d'arguments de la fonction d\'efinie ci-dessus,
+    alors il s'agit d'une application partielle et l'on passe au point
+    \ref{item:partial}, sinon passer au point \ref{item:total} ;
+  \item \label{item:partial} pour chaque argument de l'application :
+    \begin{enumerate}
+      \item si cet argument est un argument \emph{strict} pour la
+        fonction, \'evaluer l'argument puis g\'en\'erer le code
+        \fbox{\texttt{invokevirtual $m$}} o\`u $m$ est l'indice de la
+        m\'ethode \texttt{JObject apply(T)} d'application partielle
+        stricte pour l'argument de type \texttt{T},
+      \item si cet argument est non stricte, on empile sa r\'ef\'erence
+        et on g\'en\`ere code \fbox{\texttt{invokevirtual $m$}} o\`u $m$ est l'indice de la
+        m\'ethode \texttt{JObject apply(JObject)} d'application partielle
+        non stricte ;
+    \end{enumerate}
+  \item \label{item:total} chaque argument de l'application est empil\'e
+    et \'eventuellement \'evalu\'e puis on g\'en\`ere le code \fbox{\texttt{invokevirtual $m$}} o\`u $m$ est l'indice de la
+        m\'ethode d'application totale de la fonction. 
+\end{enumerate}
+
+Si le terme fonctionnel est une fonction
+primitive $f$, le nombre de param\`etre $n$ est celui attendu par
+$f$\rem{Les applications partielles de fonctions primitives d\'etect\'ees
+  dans le code source sont syst\'ematiquement transform\'ees en
+  abstraction, ce qui explique que l'on ne peut avoir d'application
+  partielle de primitive dans Jaskell-Core.} et on se trouve en
+pr\'esence d'une application d'une fonction primitive. On g\'en\`ere alors
+le code correspondant \`a l'\'evaluation des param\`etres puis on se r\'ef\`erera
+au tableau \ref{tab:primitives} pour d\'efinir la s\'equence de code
+\`a g\'en\'erer pour la fonction. 
+
+Dans le cas des applications de constructeurs, le processus est
+identique hormis les points suivants :
+\begin{itemize}
+  \item l'\'evaluation du terme fonctionnel se r\'esume \`a la g\'en\'eration du
+    code \fbox{\texttt{new $i$ ; dup}} avec $i$ l'indice de la classe de
+    l'objet construit ;
+  \item il n'y a pas d'application partielle de constructeur ;
+  \item une fois le traitement des param\`etres effectu\'es, on g\'en\`ere le
+    code \fbox{\texttt{invokespecial $m$}} o\`u $m$ est l'indice du
+    constructeur de la classe construite prenant les $n$ param\`etres
+    trait\'es.
+\end{itemize}
+
+
+\begin{table}
+\caption{Correspondance des m\'ethodes primitives}
+\label{tab:primitives}
+\begin{center}
+\begin{tabular}{|l@{$\qquad\longrightarrow\qquad$}l|}
+\hline
+Fonction Jaskell & Code-octet \\
+\hline
+\hline
+\verb|(+) :: Int -> Int -> Int| & \texttt{iadd} \\
+\verb|(*) :: Int -> Int -> Int| & \texttt{imul} \\
+\verb|(-) :: Int -> Int -> Int| & \texttt{isub} \\
+\verb|(-) :: Int -> Int| & \texttt{ineg} \\
+\verb|(/) :: Int -> Int -> Int| & \texttt{idiv} \\
+\verb|(%) :: Int -> Int -> Int| & \texttt{irem} \\
+\hline
+\verb|(+) :: Float -> Float -> Float| & \texttt{fadd} \\
+\verb|(*) :: Float -> Float -> Float| & \texttt{fmul} \\
+\verb|(-) :: Float -> Float -> Float| & \texttt{fsub} \\
+\verb|(-) :: Float -> Float| & \texttt{fneg} \\
+\verb|(/) :: Float -> Float -> Float| & \texttt{fdiv} \\
+\verb|(%) :: Float -> Float -> Float| & \texttt{frem} \\
+\hline
+\verb|(+) :: Double -> Double -> Double| & \texttt{dadd} \\
+\verb|(*) :: Double -> Double -> Double| & \texttt{dmul} \\
+\verb|(-) :: Double -> Double -> Double| & \texttt{dsub} \\
+\verb|(-) :: Double -> Double| & \texttt{dneg} \\
+\verb|(/) :: Double -> Double -> Double| & \texttt{ddiv} \\
+\verb|(%) :: Double -> Double -> Double| & \texttt{drem} \\
+\hline
+\verb|(&&) :: Bool -> Bool -> Bool| & \texttt{imul} \\
+\verb+(||) :: Bool -> Bool -> Bool+ & \texttt{iadd} \\
+\verb+(not) :: Bool -> Bool+ & \texttt{iconst\_1 ; \texttt{ixor}}\\
+\hline
+\verb|(+) :: String -> String -> String| & \begin{minipage}[t]{5cm}
+    \texttt{new} \texttt{$a$ ;} \\
+    \texttt{dup ;} \\
+    \texttt{invokespecial} \texttt{$b$ ;} \\
+    \texttt{swap ;} \\
+    \texttt{invokevirtual} \texttt{$c$ ;} \\
+    \texttt{swap ;} \\
+    \texttt{invokevirtual} \texttt{$c$ ;} \\
+    \texttt{invokevirtual} \texttt{$d$ ;} \\
+    {\footnotesize $a$ est l'indice de la constante de classe
+      \texttt{java.lang.StringBuffer}, $b$ l'indice du constructeur,
+      $c$ l'indice de la m\'ethode \texttt{append(String)} et $d$ celui
+      de la m\'ethode \texttt{String toString()}.}
+    \end{minipage} \\
+\hline
+\verb|(++) :: [a] -> [a] -> [a]|  & \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{Alternatives}
+
+Le traitement des expressions \texttt{case} g\'en\`ere une s\'equence de
+code de test et de branchement en fonction des alternatives du
+corps. Le principe de traitement est le suivant :
+\begin{enumerate}
+  \item \label{altern:exp} on g\'en\`ere le code pour l'\'evaluation de l'expression
+    \texttt{exp} ;
+  \item le r\'esultat de \ref{altern:exp} est stock\'e dans une variable
+    locale libre par une instruction \fbox{\texttt{$x$store $i$}}, $x$
+    d\'ependant du type de l'expression et $i$ \'etant l'indice d'une case
+    libre dans le tableau des variables locales ;
+  \item g\'en\'erer tous les tests de chaque alternative
+    (cf. \ref{altern:gentest}), les instructions de branchement
+    correspondantes doivent \^etre laiss\'ees libres pour \^etre modifi\'ees
+    en fonction de la taille du code de l'alternative ;   
+  \item g\'en\'erer le code de l'expression de
+    l'alternative dans une m\^eme s\'equence ;
+  \item g\'en\'erer le code par d\'efaut ;
+  \item assembler les diff\'erentes s\'equences en fixant les adresses de saut.
+\end{enumerate}
+
+\subsubsection{Condition}
+\label{altern:gentest} 
+
+Une condition d'alternative peut prendre trois
+formes : une variable, un constructeur suivi de conditions imbriqu\'ees,
+un litt\'eral. Le cas de la variable est tr\`es simple : le test est
+toujours r\'eussi et il y a liaison de la variable, c'est-\`a-dire
+g\'en\'eration du code \fbox{\texttt{$x$store $i$}} o\`u $x$ d\'epend du type
+de l'objet r\'ef\'erenc\'e et $i$ est un indice libre dans le tableau des
+variables locales. Si une condition de variable est en position
+terminale, alors on g\'en\`ere un code de branchement 
+inconditionnel \fbox{\texttt{goto $a$}} o\`u $a$ est l'adresse du bloc
+d'instruction correspondant \`a la condition, sinon, on ne g\'en\`ere rien. 
+
+Si le test concerne un constructeur avec arguments\rem{Dans le cas des
+  listes, il est n\'ecessaire de toujours positionner une condition de
+  liste vide avant une position de liste non vide.}, on g\'en\`ere la s\'equence de code
+
+\fbox{\texttt{dup ; instanceof $c$ ; ifeq $t$ ;}}
+
+o\`u $c$ est l'indice de la classe du constructeur et $t$ l'adresse de
+la condition alternative suivante. Chaque test concernant un argument
+du constructeur doit \^etre pr\'ec\'ed\'e du code n\'ecessaire au chargement sur
+la pile de la partie concern\'ee de l'objet, c'est \`a dire un code
+\fbox{\texttt{getfield $i$}}, o\`u $i$  est l'indice dans le constant
+pool du champ \`a charger. Ceci suppose de transformer les informations
+de champs par position en informations de champs par nom. De plus, si
+le test d'argument n'est pas un test de variable, il convient
+d'invoquer la m\'ethode \texttt{evalT()} sur le champ de l'objet afin de
+pouvoir r\'ealiser le test. Dans le cas d'un test de constructeur en position terminale, on g\'en\`erera
+
+\fbox{\texttt{dup ; instanceof $c$ ; ifne $a$ ;}}
+
+avec $a$ l'adresse du bloc d'instruction de la partie expression. 
+
+Si le test concerne un litt\'eral, on g\'en\`erera tout d'abord une
+instruction \fbox{\texttt{dup}} pour sauvegarder l'expression \`a tester
+si le test de litt\'eral n'est pas une partie d'un test de constructeur,
+suivie  d'instructions de comparaisons d\'ependants du type et indiqu\'ees dans le tableau
+\ref{tab:comp-literal}. 
+
+\begin{table}
+\caption{Instructions de comparaisons de litt\'eraux}
+\label{tab:comp-literal}
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+Type Java & Valeur & Test terminal & Test non-terminal \\
+\hline
+\hline
+\texttt{boolean} & \texttt{true}  & \texttt{ifne $c$} & \texttt{ifeq
+  $t$} \\
+                 & \texttt{false} &  \texttt{ifeq $c$}&  \texttt{ifne $t$}  \\
+\hline 
+\texttt{int} & 0                    & \texttt{ifeq $c$}&  \texttt{ifne $t$}  \\
+             & $n \in \{-1 \dots 5\}$ & \texttt{iconst\_$n$ ; if\_icmpeq $c$}&  \texttt{iconst\_$n$ ; if\_icmpne $t$}  \\
+             & $-128 \leq n \leq 127 $& \texttt{bipush $n$ ; if\_icmpeq $c$} & \texttt{bipush $n$ ; if\_icmpne $t$}  \\
+             & $n$ & \texttt{ldc $n$ ; if\_icmpeq $c$} & \texttt{ldc $n$ ; if\_icmpne $t$}  \\
+\hline 
+\texttt{float} & $0,1,2$ &  \texttt{fconst\_$n$ ; fcmpl ; ifeq $c$}&
+\texttt{fconst\_$n$ ; fcmpl; ifne $t$}  \\
+              & $f$ &  \texttt{ldc $f$ ; fcmpl ; ifeq $c$}&
+              \texttt{ldc $f$ ; fcmpl; ifne $t$}  \\
+\hline 
+\hline 
+\texttt{double} & $0,1$ &  \texttt{dconst\_$n$ ; dcmpl ; ifeq $c$}&
+\texttt{dconst\_$n$ ; dcmpl; ifne $t$}  \\
+              & $d$ &  \texttt{ldc\_w $d$ ; dcmpl ; ifeq $c$}&
+              \texttt{ldc\_w $d$ ; dcmpl; ifne $t$}  \\
+\hline 
+\texttt{java.lang.String} & $s$ &  \texttt{ldc $s$ ; invokevirtual $m$
+  ; ifne $c$} &
+              \texttt{ldc $s$ ; invokevirtual $m$ ; ifeq $t$}  \\
+\hline 
+\texttt{List} & \texttt{[]} &  \texttt{getstatic $f$; if\_acmpne $c$} &
+              \texttt{getstatic $f$; if\_acmpeq $t$}  \\
+\hline
+\end{tabular}
+\end{center}
+{\footnotesize $c$ est l'adresse du bloc d'instruction correspondant \`a
+  l'alternative, $t$ est l'adresse du test de l'alternative suivante,
+  $m$ est l'indice de la m\'ethode \texttt{boolean equals(Object o)} de
+  la classe \texttt{Object}, $f$ l'indice du champ statique
+  \texttt{List nil} dans la classe List.}
+\end{table}
+
+Dans le cas de tests imbriqu\'es, par exemple un litt\'eral dans un
+constructeur, tous les tests sont g\'en\'er\'es s\'equentiellement de telle
+sorte qu'un test r\'eussi entr\^aine l'ex\'ecution du test suivant. Seul le
+test en position terminale entra\^{\i}ne un branchement vers le code de
+l'alternative. 
+
+\subsubsection{Liaison de variables}
+\label{altern:genbind}
+
+Lors qu'une condition d'une alternative est v\'erifi\'ee, il y a lieu de
+lier les variables d\'eclar\'ees dans l'alternative dans l'expression
+d\'ependante. Cette op\'eration de liaison est effectu\'ee \`a la vol\'ee dans
+le code de la condition (\emph{cf. supra}). On notera qu'afin d'\'eviter
+une surcharge du tableau de variables locales, il convient de
+r\'einitialiser les indices de chargement au d\'ebut du traitement de
+chaque condition afin d'obtenir un recouvrement de l'espace utilis\'e. 
+
+\subsubsection{Exemple}
+
+Voici un exemple de g\'en\'eration de code pour une alternative :
+
+\hspace{-2cm}\hbox to 1.1\textwidth{\begin{minipage}[t]{.35\textwidth}
+\begin{lstlisting}{language=Haskell}
+case l of x  {
+  []       -> ...
+  (:) 0 ls -> ...
+  (:) x ls -> ...
+  _        -> error "impossible"
+}
+\end{lstlisting}
+\end{minipage}
+\hfill\begin{minipage}[t]{.20\textwidth}
+\begin{verbatim}
+   astore (i)
+alt0:
+   dup
+   getstatic "List.nil"
+   if_acmpeq code0
+alt1:
+   dup 
+   instanceof "List"
+   ifeq alt2
+   dup
+   getfield "car"
+   invokevirtual "JObject.evalAsInt()"
+   ifeq alt2
+   dup
+   getfield "cdr"
+   astore (i+1)   
+   goto code1
+\end{verbatim}
+\end{minipage}
+\hfill\begin{minipage}[t]{.20\textwidth}
+\begin{verbatim}
+alt2:
+   dup 
+   instanceof "List"
+   ifeq alt3
+   dup
+   getfield "car"
+   astore (i+1)   
+   dup
+   getfield "cdr"
+   astore (i+2)
+   goto code2
+alt3:
+   new error
+   dup
+   ldc "impossible"
+   invokespecial init(String)   
+   throw
+   goto end_alt
+\end{verbatim}
+\end{minipage}}
+
+\section{Optimisations}
+
+Le processus d'optimisation intervient avant la phase de compilation
+et vise \`a am\'eliorer la rapidit\'e et/ou la compacit\'e du code. 
+
+\subsection{Propagations de constantes}
+
+\section{Support d'ex\'ecution}
+
+Les classes produites par le compilateur \textsf{Jaskell2Java}
+n\'ecessitent un certains nombres de classes et de packages pr\'e-existant
+pour s'ex\'ecuter correctement. Ces classes et paquetages sont regroup\'es
+dans le paquetage \texttt{jaskell.runtime} dont nous pr\'esentons
+succintement ci-dessous l'architecture. 
+
+\subsection{Types}
+
+La hi\'erarchie de type de Jaskell est reproduite dans le paquetage
+\texttt{jaskell.runtime.types} sous la forme d'une hi\'erarchie
+d'interface. Les interfaces repr\'esentant des types Jaskell en Java
+sont par ailleurs compil\'ees pour faire aussi partie de ce paquetage. 
+La figure \ref{fig:hier-types} pr\'esente un diagramme de classe pour
+les interfaces pr\'ed\'efinies. 
+
+\begin{figure}
+\caption{Hi\'erarchie des types primitifs}
+\label{fig:hier-types}
+\begin{center}
+%\includegraphics[width=\textwidth]{figures/hier-types.eps}
+\end{center}
+\end{figure}
+
+La principale m\'ethode d\'efinie pour tous les types est la m\'ethode
+\texttt{JObject eval()} qui demande une \'evaluation de l'objet en
+question. Cette m\'ethode  permet d'obtenir une \'evaluation paresseuse
+des objets de Jaskell, au prix d'un surco\^ut d'indirection. Dans un
+certain nombre de cas --- les fonctions strictes --- on manipulera
+directement les objets sans recourir \`a l'indirection de
+\texttt{eval()}. 
+
+\subsection{Fermetures}
+
+La classe fermeture d\'efinit un certain nombre de m\'ethodes :
+
+\begin{itemize}
+    \item une m\'ethode d'application partielle encapsul\'ee
+      \texttt{apply(JObject)JObject} ;
+    \item une m\'ethode d'application totale encapsul\'ee,
+      \texttt{apply(JObject,JObject, ... , JObject)JObject}.
+\end{itemize}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "~/recherche/text/these"
+%%% End: 

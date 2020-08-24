@@ -1,0 +1,1386 @@
+% revoir def automates : P(Lambda), P(K)
+% revoir preuve des automates bien-form\'es
+% ajouter variables apparaissant seules dans les messages pour
+% construction automate
+%
+ 
+Ce chapitre est une pr\'esentation formelle de l'outil principal
+permettant de mod\'eliser les comportements de composants et
+d'interfaces dans les mod\`eles \textsf{FIDL}. Ces comportements sont
+donc mod\'elis\'es par une certaine classe d'automates, appel\'es
+automates \textsf{FIDL}, dont la principal caract\'eristique est de
+reconna\^{\i}tre un langage sur un certain alphabet de messages,
+potentiellement inifini, \`a partir d'un
+alphabet plus restreint comprenant des variables et des contraintes sur
+ces variables. 
+
+La premi\`ere partie de ce chapitre d\'efinit les automates
+\textsf{FIDL} et surtout leur comportement, c'est \`a dire le langage
+qu'ils reconnaissent et dont la d\'efinition n\'ecessite
+l'utilisation d'un \emph{environnement}. La seconde partie d\'efinit
+des expressions, similaires aux expressions rationnelles, gr\^ace
+auxquelles on peut textuellement d\'ecrire un automate
+\textsf{FIDL}. La troisi\`eme section, enfin, est consacr\'ee aux
+probl\`emes de la v\'erification des entit\'es d\'efinies au
+moyens d'automates FIDL et plus particuli\`erement au probl\`eme
+du traitement  des types de donn\'ees et de la r\'esolution des
+contraintes. 
+
+\section{Les automates \textsf{FIDL}}
+\label{sec:les-automates-fidl}
+
+Apr\`es quelques pr\'eliminaires destin\'es \`a fixer les
+notations et conventions math\'ematiques utilis\'ees dans ce
+chapitre, nous d\'efinissons donc formellement un automate
+\textsf{FIDL} et le langage qu'il reconna\^{\i}t. La d\'efinition  de
+ce langage prend en compte par ailleurs les probl\`emes de
+non-d\'eterminisme de l'automate et s'int\'eresse au cas d'automates
+synchronis\'es. Les contraintes associ\'ees \`a la d\'efinition du
+processus de reconnaissance dans un tel automate nous am\`ement in
+fine \`a pr\'eciser des propri\'et\'es de \emph{bonne formation}
+des automates.
+
+\subsection{Pr\'eliminaires}
+\label{sec:notations}
+
+\subsubsection{Mono\"{\i}des, morphismes}
+
+Pour tout ensemble $X$, $X^*$ d\'enote le mono\"{\i}de libre engendr\'e par
+$X$. Par convention, $X$ sera appel\'e alphabet et sera
+consid\'er\'e comme \emph{\`a priori} fini et non vide, sauf
+indication explicite du contraire. Un morphisme de mono\"{\i}de
+$\alpha:X^* \rightarrow Y^*$ est une 
+application qui \emph{pr\'eserve} la structure de mono\"{\i}de : 
+\begin{eqnarray}
+\forall u,v \in X^*, \alpha(uv)=\alpha(u)\alpha(v),\label{eq:monoide} \\
+\alpha(\epsilon)=\epsilon ,
+\end{eqnarray} 
+o\`u l'op\'eration de composition interne de chacun des mono\"{\i}des
+est simplement d\'enot\'ee par la concat\'enation des mots. Un morphisme
+est alphab\'etique si $\alpha(X)\subseteq Y\cup \{\epsilon\}$. Une
+\emph{projection} $\Pi_{\mathrm Y}:X^* \rightarrow Y^*$ est un morphisme
+alphab\'etique tel que $Y\subseteq X$ et 
+$$\forall x \in X, \Pi_{{\mathrm Y}}(x) =
+\left\{\begin{array}{l}x \mbox{~si~} x \in Y,\\ 
+\epsilon \mbox{~si~} x \not\in Y.
+\end{array}\right.$$
+
+Pour tout $X$, on note $\#$ le morphisme de $(X^*,\epsilon,.)$ dans $(\mathbb{N},0,+)$ tel que :
+$$
+\begin{array}{lrcl}
+\#:&X^*&\rightarrow \mathbb{N} \\
+&\epsilon&\mapsto&0\\
+&x&\mapsto&1\quad (x\in X) \\
+&u.v&\mapsto& \#u+\#v, \\
+\end{array}
+$$
+autrement dit $\#$ est la fonction donnant la \emph{longueur} d'un mot. 
+
+Soit $h_a^b : X\rightarrow Y$ le morphisme d\'efini pour tout $a\in
+X, b\in Y$, par 
+$$
+h_a^b(x) =\left\{\begin{array}{l}b \mbox{~si~} x=a,\\ 
+x \mbox{~sinon~}.
+\end{array}\right.
+$$
+Soit $X_1\times{}\dots \times{}X_n$, le produit cart\'esien de $n$
+alphabets, $n\geq 2$, on a 
+$$
+h_{a}^b((x_1,\dots,x_n)) = (h_a^b(x_1),\dots,h_a^b(x_1)),
+$$
+et on notera $h_{a_1,a_2,\dots,a_n}^{b_1,b_2,\dots,b_n}$ le morphisme
+d\'efini par 
+$$
+h_{a_1,a_2,\dots,a_n}^{b_1,b_2,\dots,b_n}(x) = \left\{\begin{array}{ll}
+        b_i, &\mbox{~si~} \exists 1\leq i\leq n, x = a_i,\\
+        x, &sinon 
+\end{array}\right..
+$$
+
+L'alphabet d'un
+langage $L$ est not\'e $\ialph(L)$. S'il n'est pas d\'efini
+pr\'ecis\'ement, c'est l'ensemble des 
+lettres qui composent les mots de ce langage. On parlera aussi
+d'alphabet \emph{induit} par le langage $L$.
+
+\subsubsection{Produits de m\'elange \& synchronisation}
+
+Le produit de \emph{m\'elange}  --- \emph{shuffle} --- des mots $u\in
+X^*$ et
+$v\in Y^*$, not\'e $u \sh v$ est d\'efini par :
+\begin{equation}
+u \sh v = \{u_1v_1\dots u_nv_n \mid u =
+u_1\dots u_n, v = v_1\dots v_n, \forall 1\leq i \leq n, u_i\in X^*,v_i \in Y^*\}.\label{eq:def-sh}
+\end{equation}
+Le produit de m\'elange de deux langages $L_1$ et $L_2$ est :
+$$L_1 \sh L_2 = \bigcup_{u \in L_1, v\in L_2} u \sh v.$$
+
+Le \emph{produit de synchronisation}\cite{dub86phd} --- ou  \emph{mixage}
+--- de deux langages $L_1$ et $L_2$
+sur les alphabets $X_1$ et $X_2$, not\'e $L_1 \mix_{X_1,X_2} L_2$  est d\'efini par :
+\begin{equation}
+L_1 \mix_{X_1,X_2} L_2 = \{u \in (X_1 \cup X_2)^* \mid
+\Pi_{X_1}(u) \in L_1 \mbox{~et~} \Pi_{X_2}(u) \in L_2
+\}.\label{eq:def-mix}
+\end{equation}
+Cette op\'eration est associative :
+$$\begin{array}{lcl}(L_1) \mix_{X_1,X_2} (L_2) \mix_{X_2,X_3} (L_3) &=& ((L_1) \mix_{X_1,X_2} (L_2)) \mix_{X_1 \cup X_2,X_3} (L_3)\\
+&=&  (L_1)_{X_1,X_2 \cup X_3} \mix ((L_2) \mix_{X_2,X_3} (L_3))\\
+\end{array}$$ 
+Lorsque plusieurs langages sont mix\'es ou m\'elang\'es, on
+utilisera les 
+symboles $\bigmix$ et $\bigsh$. De plus, si les alphabets utilis\'es
+sont les alphabets induits, on \'ecrira plus simplement $L_1\mix
+L_2$. Clairement, si $X_1 \cap X_2 =\emptyset$, alors $L_1\mix L_2 =
+L_1 \sh L_2$. 
+
+Pour tout langage $L\in X^*$, $Pref(L)$ est la cl\^oture de $L$ par ses
+facteurs gauches :
+$$
+Pref(L) = \{v\in X^* \mid \exists u\in L, w\in X^*, u=vw\}.
+$$
+
+
+Pour un ensemble quelconque $X$, ${\cal P} X$ est l'ensemble des parties de
+$X$.
+
+\paragraph{Donn\'ees \& Types}
+
+${\cal D}$ d\'esigne l'\emph{univers} des valeurs primitives, ses
+\'el\'ements sont appel\'es aussi litt\'eraux, par opposition aux
+variables. Un \emph{type}  $T$ est un sous-ensemble de
+${\cal D}$ et nous noterons ${\cal D}_T$ le domaine des valeurs de ce
+type. $Type(v)$ d\'esignera le type d'une variable ou d'un
+identifiant $v$. ${\cal V}$ est un ensemble d\'enombrable de noms de
+variables disjoint de ${\cal D}$.
+
+Sym\'etriquement, on peut d\'efinir $\cal D$ comme l'ensemble r\'esultant de l'union de tous les domaines de
+tous les types $T$. Nous ne donnons pas ici de description formelle
+d'un syst\`eme de type permettant de construire explicitement un type
+$T$ et l'ensemble des valeurs $\cal D$ consid\'erant que cette
+formalisation n'est pas n\'ecessaire pour le reste de la
+d\'efinition du langage \textsf{FIDL}. 
+
+Dans l'imm\'ediat, nous consid\'ererons que l'on dispose d'un
+ensemble de types primitifs tels que les entiers, les bool\'eens, les
+cha\^{\i}nes de caract\`eres et de types inductifs --- sans variables
+de types --- construits \`a partir de constructeurs de types tels que les
+structures et les s\'equences.
+
+\subsubsection{Graphes}
+
+Un multigraphe dirig\'e $G=(S,E)$ est un couple o\`u $S$ est un ensemble fini de sommets et
+$E$ un ensemble fini d'arcs d\'efini au moyen d'un couple
+d'applications $\iota:E\mapsto S,\omega:E\mapsto S$ associant \`a
+chaque \'el\'ement de $E$ un sommet de d\'ebut et un sommet  de
+fin. Dans le cas de graphes dirig\'es simples, si $\iota \times{}
+\omega$ est une fonction injective, on d\'ecrira les
+\'el\'ements de $E$ simplement par le couple $(s,t)$
+d'\'el\'ements de $S$ de d\'ebut et de fin de l'arc. 
+
+Une \emph{cha\^{\i}ne} est une s\'equence ordonn\'ee $\mu{}= s_1e_1s_2e_2 \dots s_{k_1}e_{k-1}s_k$
+d'\'el\'ements de $S$ et $E$ telle que  pour tout arc $e_i, 1<i<n$,
+$\iota(e_i) = s_i, \omega(e_i) = s_{i+1}$.
+
+Un $(s,t)$-\emph{chemin} est une cha\^{\i}ne telle que pour tout
+\begin{itemize}
+  \item chaque arc n'appara\^{\i}t qu'une seule fois : $\forall e_i,e_j,
+    i\neq j \implies e_i\neq e_j$ ;
+  \item chaque sommet n'appara\^{\i}t qu'une seule fois : $\forall
+  s_i,s_j, i\neq j \implies s_i\neq s_j$ ;
+  \item $s_1 = s$,  $s_k=t$.
+\end{itemize}
+
+Pour toute cha\^{\i}ne et tout chemin $\mu{}$, $E(\mu{})[i]$ d\'esigne
+l'arc $e_i$ de la cha\^{\i}ne $\mu{}$ et $S(\mu{})[i]$ le sommet $s_i$ de
+$\mu{}$. La taille d'une cha\^{\i}ne, not\'ee $\vert \mu{}\vert$ est le
+nombre de sommets parcourus par la cha\^{\i}ne. 
+
+Un \emph{cycle} est une cha\^{\i}ne telle que $s_1 = s_k$. Un cycle est
+\emph{\'el\'ementaire} si chaque $e_i$ appara\^{\i}t une et une seule
+fois dans la cha\^{\i}ne.  
+
+Un automate $A=(Q,I,T,\Sigma,\delta)$ peut \^etre vu comme  un
+multigraphe $G=(Q,\delta)$ tel que pour tout $d=(q,a,q') \in \delta$,
+$\iota(d) =q$ et $\omega(d) = q'$, muni de deux fonctions :
+\begin{itemize}
+  \item une fonction $I:Q\rightarrow \mathbb{B}$ identifiant les
+  \'etats initiaux ;
+\item une fonction $T:Q\rightarrow \mathbb{B}$ identifiant les
+  \'etats terminaux. 
+\end{itemize}
+
+\subsection{Automates}
+
+\begin{definition}[Automate \textsf{FIDL}]
+Un automate \textsf{FIDL} est un quintuplet
+$$A = (Q,q_0,T,\Sigma \times{}{\cal P}\Lambda \times{}{\cal P}\mathcal{K},\delta)\ ,$$
+o\`u $Q$
+est un ensemble d'\'etats, $q_0$, l'\'etat initial, un \'etat distingu\'e de
+$Q$, $T$ un sous-ensemble de $Q$ contenant les \emph{\'etats finaux}, $\Sigma$
+un alphabet, $\Lambda$ un ensemble \emph{fini}
+de variables, $\mathcal{K}$ un ensemble
+fini de contraintes sur $\Lambda$ et
+$\delta$ une relation de transition entre $Q \times{}(\Sigma \times{}\Lambda \times{}\mathcal{K})$ et $Q\setminus q_0$.
+\end{definition}
+
+Ce qui distingue fondamentalement un automate \textsf{FIDL} d'un
+automate classique c'est qu'il reconna\^{\i}t un langage qui n'est pas
+constitu\'e uniquement des lettres de son alphabet. L'automate est
+construit sur un alphabet contenant
+des variables, variables qui sont contraintes par des fonctions et
+pr\'edicats. L'ensemble des substitutions ou interpr\'etations de
+variables respectant les contraintes d\'efinit le langage en terme de
+lettres \og closes\fg.
+
+\subsection{Alphabet}
+\label{sec:alphabet}
+Les lettres de l'alphabet $\Sigma$ d'un automate \textsf{FIDL}  sont
+des couples constitu\'es d'une \emph{enveloppe}, identifi\'ee
+g\'en\'eralement par $m$ et appartenant \`a un ensemble ${\cal X}$, et 
+d'un \emph{contenu}, \'eventuellement vide, qui est un n-uplet
+constitu\'e de valeurs litt\'erales ou de variables. Ces lettres sont appel\'ees
+\emph{messages} et sont not\'ees $m(x_1,\dots,x_{ar(m)})$.
+
+Toute enveloppe poss\`ede une arit\'e et une
+signature qui pr\'ecisent le nombre des \'el\'ements du n-uplet
+contenu dans le message ainsi que leur type, c'est \`a dire
+l'ensemble des valeurs admissibles. Plus formellement, pour tout  $m\in
+{\cal X}$, $ar(m)
+\in \N$ est l'\emph{arit\'e} de $m$ et pour chaque indice $i\in
+\{1,\dots,ar(m)\}$, $m[i]$ est le type 
+$T$ du $i^{eme}$ param\`etre. Si $ar(m)=0$, $m$ est un message constant sans contenu. 
+
+L'ensemble de tous les messages, pour un ensemble d'enveloppes $\cal X$, est not\'e ${\cal E}$ et se
+d\'efinit comme :
+$$
+{\cal E } = \{ m(x_1,\dots,x_n) \mid m\in {\cal X},n =ar(m), x_i \in {\cal V}\cup m[i]\}.
+$$
+L'alphabet d'un automate $\Sigma$ est donc une partie \emph{finie}  de
+$\cal E$. L'ensemble des \emph{messages clos} est la  partie de $\cal E$
+qui contient uniquement les messages avec un contenu sans
+variables. Cet ensemble est not\'e $\bar{\cal E}$ et d\'efini comme :
+$$
+\bar{\cal E } = \{ m(v_1,\dots,v_n) \mid m\in {\cal X},n =ar(m), v_i \in  m[i]\}.
+$$
+
+On d\'efinit $var(\Sigma)$, l'ensemble des variables
+apparaissant dans les messages de  $\Sigma$ :
+$$
+var(\Sigma) = \bigcup_{m(x_1,\dots,x_{ar(m)}) \in \Sigma}\{x_i\in {\cal V}, \mbox{~pour~}
+1\leq i\leq ar(m) \}.
+$$
+
+\subsection{Variables \& Contraintes}
+
+\`A chaque automate \textsf{FIDL} correspond un ensemble de
+contraintes $\cal K$ et un ensemble de variables $\Lambda$. Chaque
+contrainte $c\in {\cal K}$ est constitu\'ee d'un pr\'edicat $P:{\cal D}^r\rightarrow
+\mathbb{B}$ d'arit\'e $r$ et de deux ensembles de
+variables, les variables li\'ees $bv(c)\subseteq \Lambda$ et les
+variables libres $fv(c)\subseteq
+\Lambda$, tels que pour une contrainte $c$ :
+\begin{itemize}
+  \item $bv(c) \cap fv(c) =\emptyset$ ;
+  \item $var(c) = bv(c)  \cup fv(c)$ ;
+  \item $\vert bv(c) \vert = 1$.
+\end{itemize}
+
+Par extension, on d\'efinit pour un automate $A$ l'ensemble des
+variables li\'ees et libres de $A$ :
+\begin{align*}
+    bv(A) = \bigcup_{c\in {\cal K}} bv(c) &\qquad\mbox{~et~}\qquad&
+    \begin{array}{rcl}
+fv(A) &= &(var(\Sigma) \cup \bigcup_{c\in {\cal K}} fv(c) )
+    \setminus bv(A) \\
+&=& \Lambda \setminus bv(A).
+\end{array}
+\end{align*}
+
+L'identifiant $\mathtt{Trace}$ d\'esigne une variable sp\'eciale,
+pr\'esente dans tous les automates \textsf{FIDL}, et qui a pour
+fonction de permettre la d\'efinition de contraintes et de fonctions
+d\'ependant de l'historique de l'ex\'ecution de l'automate dans
+lequel elles sont utilis\'ees. Cette variable ne peut appara\^{\i}tre
+dans le contenu d'un message. 
+
+\subsection{Langage reconnu par un automate \textsf{FIDL}}
+\label{section-reco}
+
+Le langage reconnu par un automate \textsf{FIDL} est
+constitu\'e de mots  construits
+sur l'ensemble des message clos $\bar{\cal E}$ : formellement, le
+langage d'un automate $A$ est donc inclus dans $\bar{\cal E}^*$. 
+ Dans un \'etat donn\'e de l'automate, il faut donc faire
+correspondre \`a une lettre de l'alphabet formel $\Sigma$ sur lequel est
+construit l'automate
+une ou plusieurs lettres de l'alphabet r\'eel de l'ensemble des
+mots reconnus par l'automate. Par exemple, \`a un message
+not\'e $m(v_1,\dots,v_n)$,
+o\`u $v_1,\dots,v_n$ est le contenu 
+effectif du message, doit correspondre une transition
+$(m(x_1,\dots,x_n),V,C)$ qui peut \^etre d\'eclench\'ee  dans
+l'\'etat courant.
+
+Dans l'\'etiquette d'une transition, certains des $x_i$ peuvent \^etre
+interpr\'et\'es comme des valeurs litt\'erales, auquel cas $v_i$ doit \^etre la m\^eme valeur.
+D'autres $x_j$ peuvent \^etre des variables, soit introduites dans $V$ et
+contraintes par $C$, soit comme partie de l'\'etiquette d'une
+transition menant \`a l'\'etat courant. Dans ce second cas, $v_j$ doit satisfaire la
+contrainte associ\'ee \`a $x_j$ ou la valeur pr\'ec\'edemment \og choisie\fg
+pour $x_j$. D'autres $x_i$ encore peuvent \^etre des variables
+libres, c'est \`a dire ne correspondre \`a aucune contrainte.
+Par cons\'equent, nous devons m\'emoriser lors du parcours de l'automate
+le lien entre un nom de variable et sa valeur dans un
+\emph{environnement}.
+
+\begin{definition}[Environnement]
+L'environnement d'un calcul not\'e $\sigma$ --- pour \emph{store}  --- est
+un triplet $(V,val,pred)$ o\`u :
+\begin{itemize}
+  \item $V\subset \cal V$ est un ensemble fini de variables ;
+\item $val : V\rightarrow {\cal D}\cup \{\bot\}$ est une fonction
+  totale de \emph{valeur} ou \emph{valuation} assignant \`a chaque variable
+  une valeur dans $\cal D$, les valeurs ind\'efinies
+  \'etant d\'enot\'ees par $\bot$, o\`u $\bot \not\in {\cal
+  D}$.  ;
+\item $pred: V\rightarrow({\cal D}\rightarrow
+  \mathbb{B})$ est une fonction totale de \emph{contrainte}
+  assignant \`a chaque variable un pr\'edicat sur ${\cal D}$ qui est
+  une fonction de l'ensemble des valeurs dans l'ensemble des
+  bool\'eens $\{\mathtt{true},\mathtt{false}\}$. Par abus de langage
+  nous d\'esignerons par $\mathtt{true}$ --- resp. $\mathtt{false}$
+  --- la fonction constante  $\lambda x.\mathtt{true}$ --- resp.  $\lambda x.\mathtt{false}$.
+\end{itemize}
+Pour un environnement $\sigma$ on note $V_\sigma$, $val_\sigma$ et
+$pred_\sigma$ les diff\'erents composants de l'environnement,
+l'indice \'etant omis lorsque l'environnement est clairement
+pr\'ecis\'e par le contexte.
+\end{definition}
+
+Nous d\'efinissons maintenant un pas de l'ex\'ecution d'un automate
+\textsf{FIDL} $A=(Q,q_0,T,\Sigma \times{}{\cal P}\Lambda
+\times{}{\cal P}\mathcal{K},\delta)$, \`a partir d'un couple $(q,\sigma)$
+form\'e de l'\'etat courant de
+l'automate $q\in Q$ et d'un environnement associ\'e.
+
+\paragraph{D\'eclenchement d'une transition}
+Soit un automate $A$ dans un \'etat $q$ associ\'e \`a un
+environnement $\sigma=(V,val,pred)$, et une lettre $a = m(v_1,\dots,v_n)$, l'automate peut atteindre l'\'etat $q'$ s'il existe
+une transition $(q,(m(x_1,\dots,x_n),
+W,K),q')$ dans $A$ telle que pour tout $i$, $1\leq i\leq n$ :
+\begin{itemize}
+  \item soit $x_i$ est un litt\'eral et $v_i=x_i$. La transition est
+  d\'efinie avec une valeur litt\'erale qui doit \^etre
+  identique \`a la valeur contenue dans le message ;
+\item soit $x_i$ est une variable d\'efinie dans $W$ et
+  $K(v_i)=\mathtt{true}$. La variable $x_i$ est d\'eclar\'ee et
+  contrainte localement et la contrainte est respect\'ee par $v_i$ ;
+\item soit $x_i\not\in W$ est une variable et  $x_i \in
+  V$, c'est \`a dire que la variable sur la transition a \'et\'e
+  d\'eclar\'ee et contrainte pr\'ec\'edemment, alors :
+  \begin{itemize}
+    \item soit $val_\sigma(x_i)=v_i$,
+    \item soit $val_\sigma(x_i)= \bot$ et $pred_\sigma(x_i)(v_i) = \mathtt{true}$.
+  \end{itemize}
+% \item soit $x_i$ est une variable libre et $v_i$ est une  valeur appartenant au type de $x_i$.
+\end{itemize}
+Cette propri\'et\'e est not\'ee
+$$
+(q,\sigma) \xrightarrow{a} (q',\sigma')
+$$
+o\`u $\sigma'=(V_{\sigma'}, val_{\sigma'},pred_{\sigma'})$ est un
+nouvel environnement d\'efini  par :
+$$
+\begin{array}{rcl}
+V_{\sigma'} &=&  V_\sigma \cup W, \\
+val_{\sigma'} &=& \{x_i \mapsto v_i \mid  i \in \{1,\dots,n\} \} \\
+& \cup& \{y \mapsto \bot \mid y \in W, \exists c(y) \in K,\\
+&&\ \ y \neq x_i, \forall i \in \{1,\dots,n\} \} \\
+& \cup & \{\mathtt{Trace} \mapsto val_\sigma(\mathtt{Trace}).a\} \\
+&\cup& \{y \mapsto z \mid y \not\in W, y \in V_\sigma\setminus\{\mathtt{Trace}\}, z = val_\sigma(y)\}, \\
+pred_{\sigma'}&=&  \{x_i \mapsto \mathtt{true} \mid i \in
+\{1,\dots,n\} \} \\
+& \cup& \{y \mapsto c \mid y \in W, \exists c(y) \in K,\\
+&&\ \ y \neq x_i, \forall i \in \{1,\dots,n\} \} \\
+& \cup& \{y \mapsto c \mid y \not\in W, y \in V_\sigma\setminus\{\mathtt{Trace}\}, c = pred_\sigma(y)\}\\
+& \cup& \{\mathtt{Trace} \mapsto \mathtt{true}\}.\\
+\end{array}
+$$
+
+La condition de franchissement d'une transition inclut outre une
+condition sur l'\'egalit\'e des attributs de l'\'ev\'enement, une
+v\'erification de la validit\'e des valeurs des param\`etres de
+messages eu \'egard \`a l'environnement courant, c'est \`a dire aux
+contraintes d\'efinies sur les variables. Ce franchissement n'est
+possible que si, pour chaque param\`etre, sa valeur est \'egale \`a
+celle stock\'ee pour la variable correspondante dans l'environnement
+courant ou compatible avec les contraintes actuellement d\'efinies
+pour cette variable.
+
+La mise \`a jour de l'environnement --- d\'efinie ici par
+cr\'eation d'un nouvel environnement $\sigma'$ --- comprend les
+\'etapes suivantes :
+\begin{itemize}
+  \item on \'etend tout d'abord l'ancien ensemble de variables avec
+  l'ensemble des variables d\'eclar\'ees dans la transition ;
+\item la valuation des variables est ensuite modifi\'ee : toutes les
+  occurences de variables apparaissant dans le corps du message sur la
+  transition re\c{c}oivent la valeur correspondante dans le corps du
+  message de l'\'ev\'enement lu, les autres variables
+  d\'eclar\'ees dans la transition re\c{c}oivent la valeur
+  sp\'eciale ind\'efinie $\bot$ et la trace $\mathtt{Trace}$ est
+  mise \`a jour, le reste de l'environnement demeurant inchang\'e ;
+\item finalement, la fonction de contrainte est mise \`a jour : le
+  pr\'edicat associ\'e aux variables devenues d\'efinies devient
+  $\mathtt{true}$ pour signifier qu'il n'est plus n\'ecessaire de le
+  v\'erifier, les nouvelles contraintes d\'eclar\'ees sur la
+  transition sont ajout\'ees \`a l'environnement et les autres contraintes restent inchang\'ees.
+\end{itemize}
+
+\paragraph{Reconnaissance}
+Enfin, nous pouvons d\'efinir la reconnaissance d'un mot et par
+cons\'equent l'ensemble des mots reconnus par un automate \textsf{FIDL}.
+\begin{definition}
+Soient $A= (Q,q_0,T,\Sigma \times{}{\cal P}\Lambda \times{}{\cal P}\mathcal{K},\delta)$ un
+automate et $T=e_1 e_2 \dots e_n$ un mot avec $\forall i, 1\leq i \leq
+n, e_i\in \bar{\cal E}$,
+$T$ est
+\emph{accept\'e} par $A$ s'il existe une s\'equence de couples
+$(q,\sigma_0) \dots (q_{n},\sigma_{n})$ tels que
+\begin{itemize}
+  \item $q = q_0$, l'\'etat initial de $A$ et $\sigma_0 =
+  (\{\mathtt{Trace}\},\{ \mathtt{Trace}\mapsto
+  \varepsilon\},\{\mathtt{Trace}\mapsto \mathtt{true}\})$ ;
+\item quel que soit $j$, $0\leq j < n$, $(q_j,\sigma_j)
+  \xrightarrow{e_{j+1}} (q_{j+1},\sigma_{j+1})$ ;
+\item $q_n \in T$.
+\end{itemize}
+Le langage reconnu par $A$, not\'e $L({A})$, est l'ensemble des
+mots reconnus par $A$.
+\end{definition}
+
+\subsection{Reconnaissance par synchronisation d'automates}
+\label{sec:reconn-par-synchr}
+
+Soient les automates \textsf{FIDL}
+$A_1,\dots,A_n$, on d\'efinit la
+reconnaissance d'un mot par \emph{synchronisation des automates}
+$A_1,\dots,A_n$ et donc le langage des automates synchronis\'e
+$A_1,\dots, A_n$. Ceci nous permet de d\'efinir un automate
+synchronis\'e $\cal A$ comme le n-uplet $(A_1,\dots,A_n)$, son
+langage $L_{\cal A}$ \'etant bien entendu le langage des automates
+synchronis\'e $A_1,\dots,A_n$ sans qu'il soit n\'ecessaire de
+construire explicitement l'automate $\cal A$. 
+
+L'\'etat associ\'e \`a un calcul est  un n-uplet d'\'etats \'el\'ementaires
+$$((q_1,\sigma_1),\dots,(q_n,\sigma_n)).$$
+Un \'ev\'enement $e=m(v_1,\dots,v_p)$ est reconnu par la machine ${\cal A}$ et permet
+d'atteindre l'\'etat
+$$((q_1',\sigma_1'),\dots,(q_n',\sigma_n')),$$
+si pour chaque $i$, $1\leq i\leq n$ :
+\begin{enumerate}
+  \item si $m$ appartient \`a l'alphabet de $A_i$, c'est \`a dire
+  si il existe $a=m(y_1,\dots,y_p)\in \Sigma_i$,  alors
+    $$(q_i,\sigma_i) \xrightarrow{a} (q_i',\sigma_i')\ ;$$
+  \item sinon, $(q_i,\sigma_i) = (q_i',\sigma_i').$
+\end{enumerate}
+Un mot $u=m_1 m_2 \dots m_k$ est reconnu par $\cal A$ si il existe une
+s\'equence de n-uplets  $Q_0 Q_1 \dots Q_m$, avec $Q_0 =
+((q_1^0,\sigma_1^0),\dots,(q_n^0,\sigma_n^0)), Q_i =
+((q_1^i,\sigma_1^i),\dots,(q_n^i,\sigma_n^i)), 1\leq i$, telle que pour tout
+$j, 1\leq j\leq k$, pour tout $1\leq i\leq n$,  $(q_{j}^i,\sigma_j^i)
+\xrightarrow{m_i} (q_{j+1}^i,\sigma_{j+1}^i)$, $q_k^i\in T_{A_i}$.
+
+
+\subsection{Automate bien-form\'e}
+
+Il appara\^{\i}t \'evident de la d\'efinition du langage telle que
+donn\'ee ci-dessus que celle-ci d\'epend des d\'eclarations de
+variables et de la r\'esolution des contraintes y aff\'erent. Pour
+que le processus de d\'efinition des variables dans l'environnement
+en fonction des messages effectivement lus puisse se d\'erouler
+correctement, il est n\'ecessaire d'imposer des r\`egles de
+bonnes formation pour les automates :
+\begin{itemize}
+  \item toutes les variables, \`a l'exception de la variable
+    $\mathtt{Trace}$ doivent \^etre d\'eclar\'ees sur la transition
+    o\`u elles sont utilis\'ees ou sur une transition ayant d\'ej\`a
+    \'et\'e franchie par le processus de reconnaissance ;
+  \item lorsque la valeur d'une variable est contrainte par un
+    pr\'edicat dans lequel apparaissent d'autres variables, celles-ci
+    doivent avoir \'et\'e pr\'ealablement d\'eclar\'ees et
+    d\'efinies. Cette condition implique que les contraintes ne
+    peuvent \^etre r\'ecursivement d\'ependantes les unes des
+    autres. 
+\end{itemize}
+
+Nous d\'efinissons tout d'abord une relation entre les diff\'erentes
+contraintes utilis\'ees dans un automate en fonction de leur
+interd\'ependance. 
+
+\begin{definition}[D\'ependance des contraintes]
+    \'Etant donn\'e un automate \textsf{FIDL}  $A= (Q,q_0,T,\Sigma
+    \times{}{\cal P}\Lambda \times{}{\cal P}\mathcal{K},\delta)$, la relation
+    de d\'ependance entre deux contraintes $c,c'$, not\'ee $c\leq c'$ est une partie
+    de  ${\cal K}\times{}{\cal K}$  telle que :
+    \begin{itemize}
+      \item $c\leq c$ ;
+      \item s'il existe un chemin $q d q' \mu{} p
+      d' p'$  dans l'automate $A$, avec $d=(q,(e,V,K),q') \in \delta$,
+      $d'=(p,(e',V',K'),p') \in \delta$, et des contraintes $c\in K$,
+      $c' \in K'$, telles que $bv(c)\subseteq fv(c')$, alors $c\leq c'$. 
+    \end{itemize}
+\end{definition}
+
+Cette relation exprime formellement le fait qu'une variable li\'ee
+par une contrainte $c$ et utilis\'ee par une autre contrainte $c'$, telles
+qu'il existe un chemin dans l'automate menant de l'une \`a l'autre,
+induit une d\'ependance de $c'$ envers $c$.
+
+Les propri\'et\'es de bonne formation d'un automate s'expriment
+alors formellement comme :
+
+\begin{definition}[Automate \textsf{FIDL} bien form\'e]
+\label{def:automate-bien-forme}  \'Etant donn\'e un automate \textsf{FIDL}  $A= (Q,q_0,T,\Sigma
+    \times{}{\cal P}\Lambda
+    \times{}{\cal P}\mathcal{K},\delta)$, on note $\mu{}_{q,p}$ un 
+    $(q,p)$-chemin du graphe de $A$ entre les \'etats $q$ et $q'$
+    form\'e par une s\'equence de transitions de $\delta$.
+ $A$ est dit bien form\'e si et seulement si
+    \begin{enumerate}
+      \item \label{prop-wf-circ} la cl\^oture transitive de la
+      relation de d\'ependance entre contraintes $\leq$ est un
+      bon-ordre partiel : elle est r\'eflexive,  transitive et
+      surtout \emph{anti-sym\'etrique} ;
+  \item \label{prof-wf-nofree} pour tout $c\in {\cal K}$ et toute
+    transition $(q,(m,V,K),q')\in \delta$ telle que $c\in K$, pour toute
+    variable libre $y\in fv(c)$, alors pour tout $(q_0,q')$-chemin $\mu{}=
+    \mu{}_1 (q_1,(m',V',K'),q_2) \mu{}_2 (q,(m,V,K),q')$, il
+    existe $(q_1,(m',V',K'),q_2)$ avec dans $K'$ une contrainte $c'$
+    liant $y$ ;
+  \item \label{prof-wf-trace} si $\mathtt{Trace} \in \Lambda$ alors,
+  $fv(A) =  \{\mathtt{Trace}\}$ sinon $fv(A) = \emptyset$.  
+\end{enumerate}
+\end{definition}
+
+\subsection{Non-d\'eterminisme}
+
+Un automate \textsf{FIDL} peut \^etre non-d\'eterministe : \`a
+partir d'un m\^eme \'etat, il peut exister deux transitions 
+\'etiquet\'ees par le m\^eme message telles que les environnements
+permettant de satisfaire les contraintes apparaissant sur les deux
+transitions contiennent des valeurs de variables communes. Plus
+formellement, un automate \textsf{FIDL} $A=(q_0,T,\Sigma \times{}{\cal P}\Lambda
+\times{}{\cal P}\mathcal{K},\delta)$ est non d\'eterministe si, pour deux
+transitions $d_1=(q,((m,x_1,\dots,x_n),
+W,K),q')$ et $d_2=(q,((m,y_1,\dots,y_n),
+W',K'),q'')$, il existe $\sigma,\sigma_1',\sigma_2'$ des
+environnements et un mot $u=ve$ tels que :
+$$
+(q_0,\sigma_0)\xrightarrow{u}(q,\sigma)\xrightarrow[d_1]{e} (q',\sigma_1') \qquad \mbox{et} \qquad (q_0,\sigma_0)\xrightarrow{u}(q,\sigma)\xrightarrow[d_2]{e} (q'',\sigma_1')
+$$
+
+Or nous avons d\'efini la reconnaissance des langages  en termes d'automates
+d\'eterministes. L'extension au cas des automates
+non-d\'eterministes est toutefois simple : la reconnaissance dans un automate non-d\'eterministe se fait comme
+d'habitude en consid\'erant \`a chaque pas de l'automate l'ensemble
+des \'etats accessibles et l'union des environnements associ\'es.
+
+Si l'on note $[q]\subseteq Q$ un \'etat de l'automate non
+d\'eterministe, alors $([q],\sigma)\xrightarrow{e} ([q'],\sigma')$
+ssi
+$$
+\forall p \in [q], \exists p' \in [q'], (p,\sigma)\xrightarrow{e} (p',\sigma_p)
+$$
+avec $\sigma' = \cup_{p} \sigma_p$. 
+
+\section{Expressions \textsf{FIDL}}
+
+Les automates FIDL sont construits \`a partir d'expressions du
+m\^eme nom permettant d'exprimer la structure de l'automate sous la
+forme d'une expression de type rationnelle contenant des contraintes. Nous
+d\'efinissons dans cette section le processus de construction des
+automates \textsf{FIDL} \`a partir des expressions. Nous faisons en
+sorte de contraindre la forme des expressions pour que tous les
+automates \textsf{FIDL} construits \`a partir d'expressions
+syntaxiquement correctes soient bien form\'es.
+
+\subsection{Expressions}
+\label{sec:expressions}
+
+Nous avons d\'ej\`a vus les expressions  \textsf{FIDL} de mani\`ere
+informelle dans le chapitre \ref{chap-fidl}. La syntaxe est
+pr\'ecis\'ee dans la figure \ref{fig-syn-fidl}. Ces expressions sont semblables aux
+expressions rationnelles classiques form\'ees \`a partir de l'alphabet des messages
+possibles dans le contexte de l'expression. En plus des op\'erateurs
+usuels des langages rationnels, union, concat\'enation et
+\'etoile, on utilise des op\'erateurs binaires pour exprimer le
+produit  de m\'elange $\|$ et la synchronisation
+$\mathbf{and}$. Surtout, la principale diff\'erence s'exprime dans l'utilisation  de
+contraintes et de variables qui ont un impact important sur la
+s\'emantique de ces expressions. Pour simplifier les
+d\'efinitions qui suivent, le symbole  $\circ$ d\'esigne l'un quelconque des op\'erateurs
+binaires $.$, $\|$, $+$, $\mathbf{and}$. 
+
+\subsubsection{Syntaxe}
+
+Ceci est un rappel de la syntaxe pr\'ec\'edemment  donn\'ee.
+
+\begin{figure}[htbp]
+\begin{minipage}[t]{.45\textwidth}
+    \begin{equation}
+\begin{array}{ccl}
+        Expr &\quad\rightarrow\quad& Expr Expr \mid Expr^* \mid \\
+        && Expr + Expr \mid (Expr) \mid \\
+        && Expr \parallel Expr \mid \\
+&&(Ctr\ \mathbf{in}\ Expr) \mid \\
+        && Msg \mid \mathtt{void}\\
+        Msg &\quad\rightarrow\quad& m(Param) \mid m() \\
+        Param &\quad\rightarrow\quad& Atom \mid Atom,Param \\
+        Atom &\quad\rightarrow\quad& x \mid l \\
+\end{array}
+\end{equation}
+\end{minipage}
+\begin{minipage}[t]{.45\textwidth}
+    \begin{equation}
+\begin{array}{ccl}
+Ctr &\quad\rightarrow\quad& x : Pred \\
+Pred &\quad\rightarrow\quad& \mathtt{true} \mid \mathtt{false} \mid \\
+&&Pred \vee Pred \mid \neg{}Pred \mid p
+(x,Fun)  \\
+Fun &\quad\rightarrow\quad& f(Par) \mid l \\
+Par &\quad\rightarrow\quad& Par,y  \mid y \mid Fun \mid \mathtt{Trace} \\
+\end{array}
+\end{equation}
+\end{minipage}\centering
+
+\caption{Syntaxe des expressions \textsf{FIDL} (interfaces)}
+\label{fig-syn-fidl-rappel}
+\end{figure}
+
+Les symboles $x,y$, $l$, $p$ et $f$ sont des symboles terminaux
+d\'enotant respectivement  des variables de l'ensemble ${\cal
+  V}\setminus \{ \mathtt{Trace} \}$, des
+litt\'eraux de l'ensemble $\cal D$, des
+pr\'edicats n-aires de ${\cal D}^n$ dans $\mathbb{B}$ et des
+fonctions d'arit\'es $r$ de ${\cal D}^r$ dans ${\cal D}$.
+
+\subsubsection{R\`egles s\'emantiques}
+
+Les expressions FIDL doivent respecter par ailleurs les r\`egles
+s\'emantiques suivantes. 
+
+\paragraph{Variables}
+
+Les expressions FIDL contiennent des variables qui repr\'esentent des
+donn\'ees transport\'ees par les messages. Pour une expression $E$,
+on d\'efinit des
+ensembles de variables li\'ees $bv(E)$ et libres $fv(E)$. L'ensemble
+des variables de $E$, $var(E)$ est simplement d\'efini comme $var(E)
+= bv(E) \cup fv(E)$. Ces
+ensembles de variables sont d\'efinis inductivement par les r\`egles
+suivantes :
+
+$$
+\begin{array}{rcl}
+bv(E^*) &=&  bv(E), \\
+fv(E^*) &=&  fv(E) \\
+\\
+bv(E\circ F) &=&  bv(E) \cup bv(F), \\
+fv(E\circ F) &=&  fv(E) \cup fv(F) \\
+\\
+fv(Msg) = fv(m(x_1,\dots,x_n)) &=& \{x_i \in {\cal V},
+1\leq i \leq n\}, \\
+bv(Msg) = bv(m(x_1,\dots,x_n)) &=& \emptyset \\
+\\
+bv(Ctr\ \mathbf{in}\ E) &=& bv(E) \cup
+bv(Ctr), \\
+fv(Ctr\ \mathbf{in}\ E) &=& fv(E)\cup fv(Ctr) \setminus
+bv(Ctr) \\
+\\
+fv(Ctr) = fv(x:Pred) &=& var(Pred)\setminus \{x\}, \\
+bv(Ctr) = bv(x:Pred) &=& \{x\} \\
+\end{array}
+$$
+
+L'op\'eration d'$\alpha$-renommage des variables permet de s'assurer
+que si $E=F\circ G$, alors on a  $bv(F) \cap bv(G) = \emptyset$, $bv(F) \cap var(G) =
+\emptyset$, $var(F) \cap bv(G) = \emptyset$. Les variables li\'ees
+ont ainsi une port\'ee unique limit\'ee \`a l'arbre d'expression
+qui suit leur introduction. 
+
+\begin{definition}[$\alpha$-renommage]
+$$
+\begin{array}{rrcl}
+\alpha:&L_E &\longrightarrow& L_E \\
+&\alpha(\mathtt{void}) &\longmapsto& \mathtt{void}\\
+&\alpha(Msg) &\longmapsto& Msg \\
+&\alpha(E \circ F) &\longmapsto&
+\left\{\begin{array}{ll}
+\alpha(E) \circ \alpha(F),& \mbox{~si~}
+bv(E) \cap var(F) = var(E) \cap bv(F) = \emptyset \\
+\alpha(h_x^{x'}(E) \circ  h_x^{x''}(F)),& \mbox{~pour~} x\in bv(F)\cap bv(G),
+\mbox{~avec~} x',x''\not\in var(F)\cup var(E) \\
+\end{array}\right. \\
+&\alpha(E^*) &\longmapsto&\alpha(E)^*\\
+&\alpha(x:P(x) \mathbf{~in~} E) &\longmapsto&  x:P(x) \mathbf{~in~}
+\alpha(E))\\
+\end{array}
+$$
+\end{definition}
+
+Une expression de contrainte est non ambig\"ue si la variable
+d\'efinie et sa contrainte n'utilisent pas de variables li\'ees dans
+la sous-expression associ\'ee.
+
+\begin{property}[Expression non-ambig\"ue]
+Une expression $(x:Pred\ \mathbf{in}\ Expr)$ est non-ambig\"ue si et
+seulement si  
+$$(x \cup
+var(Pred)) \cap bv(Expr) = \emptyset.$$
+\end{property}
+
+Enfin, nous exigerons que toute expression $E$ ne contienne
+comme seule variable libre que la variable $\mathtt{Trace}$ :
+
+\begin{property}[Cl\^oture]
+   Une expression $E$ est \emph{close} si et seulement si 
+$$
+fv(E) \subseteq \{\mathtt{Trace}\}.
+$$
+\end{property}
+
+\begin{definition}[Expression bien-form\'ee]
+    \label{def:exprwf}
+    Une expression \textsf{FIDL} $E$ est bien form\'ee si :
+    \begin{enumerate}
+      \item $E$ est transform\'ee par la fonction de renommage
+        $\alpha$ ;
+      \item $E$ et toute ses sous-expressions sont non ambig\"ues ;
+      \item $E$ est close.
+    \end{enumerate}
+ \end{definition}
+
+\subsection{Construction}
+\label{section-construction}
+\`A partir d'une expression $E$ ne comprenant pas
+d'op\'erateur de synchronisation \textbf{and} (voir chapitre
+\ref{chap-fidl}, section \ref{sec:grammaire}), on construit par
+induction l'automate \textsf{FIDL}
+associ\'e  $A = (Q,q_0,T,\Sigma\times{}{\cal P}\Lambda\times{}{\cal P}\mathcal{K},
+\delta)$ de la mani\`ere suivante :
+
+\begin{itemize}
+  \item \textbf{Mot vide.} Si $E = void$ alors $A= (\{q_0\}, q_0,\{q_0\},\emptyset,\emptyset)$.
+  \item \textbf{Message.} Si $E = m(p_1,\dots,p_n)$  est un  message, avec $p_i$ une
+    variable ou un litt\'eral, alors
+    $A=(\{q_0,q_1\}, q_0, \{q_1\},  \{(m(p_1,\dots,p_n),var(m),\emptyset)\},
+    \{(q_0, (m, var(m),\emptyset),q_1)\}\}$.
+  \item \textbf{Produit.} Si $E = F.G$, avec $(Q_F,q_{0_F},T_F,
+  \Sigma_F  \times{}{\cal P}\Lambda_F \times{}{\cal P}\mathcal{K}_F,\delta_F)$ et $(Q_G,q_{0_G},
+  T_G,\Sigma_G,
+  {\cal P}\Lambda_G \times{}{\cal P}\mathcal{K}_G,\delta_G)$ les automates associ\'es  respectivement \`a $F$ et  $G$, alors $Q = Q_F \cup Q_G$, $q_0 = q_{0_F}$, $T = T_G \cup T_F$
+   si $q_{0_G}$ est dans $T_G$ , $T = T_G$ sinon,
+  $\Lambda=\Lambda_F\cup \Lambda_G$,$\mathcal{K}=\mathcal{K}_F\cup \mathcal{K}_G$, $\Sigma = \Sigma_F \cup
+    \Sigma_G$  et
+    \[
+    \begin{array}{rcl}
+        \delta =&&  \{(q,(m,V,C),q') \in \delta_F  \}  \\
+        &\cup&\{(q,(m,V, C),q') \in \delta_G \mid  q\neq q_{0_G}\}\\
+        &\cup&\{(q,(m,V,C),q')\mid  q\in T_F, (q_{0_G},(m,V,C),q')
+        \in \delta_G\}. \\
+    \end{array}
+    \]
+  \item \textbf{Union.} Si $E = F + G$ avec $(Q_F,q_{0_F},T_F,
+  \Sigma_F  \times{}{\cal P}\Lambda_F \times{}{\cal P}\mathcal{K}_F,\delta_F)$ and
+  $(Q_G,q_{0_G}, T_G,\Sigma_G,
+  {\cal P}\Lambda_G \times{}{\cal P}\mathcal{K}_G,\delta_G)$ les automates associ\'es
+  respectivement \`a $F$ et  $G$, alors
+   $Q = (Q_F \cup Q_G) \backslash \{q_{0_G},q_{0_F}\} \cup \{q_0\}$,
+   $T$ est l'union de   $T_F \cup T_G$ et de  $ \{q_0\}$ si
+                $q_{0_G}$ est dans  $T_G$ ou  $q_{0_F}$ est dans $T_F$,
+         $\Lambda=\Lambda_F\cup \Lambda_G$,$\mathcal{K}=\mathcal{K}_F\cup \mathcal{K}_G$,$\Sigma = \Sigma_F \cup \Sigma_G$ et
+    \[
+    \begin{array}{rcl}
+        \delta =&&  \{(q,(m,V,C),q') \in \delta_F \mid q\neq q_{0_F} \}\\
+        &\cup&\{(q,(m,V,C),q') \in \delta_G \mid q\neq q_{0_G}\}\\
+        &\cup&\{(q_0,(m,V,C),q)\mid (q_{0_F},(m,V,C),q) \in \delta_F\}\\
+        &\cup&\{(q_0,(m,V,C),q)\mid (q_{0_G},(m,V,C),q) \in \delta_G \}.
+    \end{array}
+    \]
+
+  \item \textbf{M\'elange.} Si $E = F \parallel G$ avec $(Q_F,q_{0_F},T_F,
+  \Sigma_F  \times{}{\cal P}\Lambda_F \times{}{\cal P}\mathcal{K}_F,\delta_F)$ and
+  $(Q_G,q_{0_G}, T_G,\Sigma_G,
+  {\cal P}\Lambda_G \times{}{\cal P}\mathcal{K}_G,\delta_G)$ les automates associ\'es
+  respectivement \`a $F$ et  $G$, alors
+   $Q = Q_F \times{}Q_G$, $q_0 = (q_{0_F},q_{0_G}),
+   T = T_F \times{}T_G$,
+    $\Lambda=\Lambda_F\cup \Lambda_G$,$\mathcal{K}=\mathcal{K}_F\cup \mathcal{K}_G$,$\Sigma = \Sigma_F \cup \Sigma_G$ et
+    \[
+    \begin{array}{rcl}
+        \delta=&& \{((q,p),(m,V,C),(q',p)) \mid (q,(m,V,C),q') \in \delta_F\}\\
+        &\cup&\{((q,p),(m,V,C),(q,p')) \mid (p,(m,V,C),p') \in \delta_G\}. \\
+    \end{array}
+    \]
+  \item \textbf{\'Etoile.} Si $E = F^*$ avec $(Q_F,q_{0_F},T_F,
+  \Sigma_F  \times{}{\cal P}\Lambda_F \times{}{\cal P}\mathcal{K}_F,\delta_F)$
+   l'automate associ\'e \`a $F$ alors $Q = Q_F $, $q_0 = q_{0_F}$,
+  $T = T_F \cup q_0$, $\Lambda=\Lambda_F$, $\mathcal{K}=\mathcal{K}_F$,$\Sigma = \Sigma_F$,
+    \[
+    \begin{array}{r}
+        \delta_E = \delta_F \cup \{(q,(m,V,C),q') \in \delta_F \mid q\in T_F,\exists (q_{0_F},(m,V,C),q') \in \delta_F\}.\\
+    \end{array}
+    \]
+  \item \textbf{Contrainte.} Si $E=(x:Pred ~\mathbf{in}~F)$ avec $(Q_F,q_{0_F},T_F,
+  \Sigma_F  \times{}{\cal P}\Lambda_F \times{}{\cal P}\mathcal{K}_F,\delta_F)$ l'automate
+  associ\'e \`a $F$ alors $Q =
+    Q_F$, $q_0 = q_{0_F}$, $T = T_F$, $\Sigma = \Sigma_F$, $\Lambda =
+  \Lambda_F \cup \{x\} \cup var(Pred)$, ${\cal K} = {\cal K}_F \cup \{Pred\}$ et
+    \[
+    \begin{array}{rcl}
+    \delta = &&\{(q,(m,V,C),q') \in \delta_F \mid q \neq q_{0_F} \} \\
+    & \cup &
+    \{(q_{0_F},(m,\{x\} \cup V',
+    \{Pred\} \cup C',q) \mid (q_{0_F},(m,V',C'),q) \in \delta_F \}.\\
+    \end{array}
+    \]
+\end{itemize}
+
+\subsubsection{Expressions \& Automates Bien Form\'es}
+
+Pour que s'assurer de la correction de cette construction et donc de
+la validit\'e de la s\'emantique des expressions  \textsf{FIDL},
+nous montrons que toute expression \'ecrite selon les r\`egles
+pr\'ec\'edemment d\'efinies et proprement renomm\'ee engendre un
+automate \textsf{FIDL} bien-form\'e.
+
+On notera que la r\`egle de bonne formation des expressions et des
+automates qui n\'ecessite que toutes les variables soient
+d\'eclar\'ees n'est pas une propri\'et\'e inductive : elle peut
+\^etre vraie sur une expression ou un automate et fausse sur une
+sous-expression ou une partie de l'automate, m\^eme si ceux-ci sont
+par ailleurs bien-form\'es en regard des autres r\`egles. 
+
+Nous montrons donc tout d'abord un lemme technique qui v\'erifie
+l'identit\'e entre les variables des expressions et des automates et
+le respect des autres r\`egles de bonne formation.
+
+\begin{lemma}
+    \label{lem:exp-auto}
+    Si $A=(Q, q_0,T,\Sigma\times{}{\cal P}\Lambda\times{}{\cal P}\mathcal{K},
+    \delta)$ est un automate construit \`a partir d'une expression
+    bien-form\'ee $E$,  alors les propri\'et\'es suivantes sont
+    v\'erifi\'ees :
+    \begin{enumerate}
+      \item $fv(E) = fv(A)$ et $bv(E) = bv(A)$ ;
+      \item la relation $\leq$ sur $A$ un bon ordre partiel (propri\'et\'e
+        \ref{prop-wf-circ} de la d\'efinition \ref{def:automate-bien-forme}) ;
+      \item  la propri\'et\'e \ref{prof-wf-nofree}, d\'efinition
+      \ref{def:automate-bien-forme}, est v\'erifi\'ee pour toutes
+      les variables appartenant \`a $fv(A) \cap bv(A)$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+Nous montrons le lemme par induction sur la stucture des expressions :
+\begin{itemize}
+      \item si $E=m(x_1,\dots,x_n)$ un message, alors on a
+        \begin{itemize}
+          \item $fv(E) = fv(A) = var(m(x_1,\dots,x_n))$ et $bv(E) =
+          bv(A) = \emptyset$,
+          \item $\leq = \emptyset$  est un bon ordre partiel,
+          \item la propri\'et\'e est v\'erifi\'ee puisqu'aucune
+            variable n'est li\'ee ;
+  \end{itemize}
+\item si $E=F+G$,
+  \begin{itemize}
+    \item $bv(A_E) = \bigcup_{c\in {\cal K}_E} bv(c)$ et par
+    hypoth\`ese d'induction on a $ bv(A_E) = \bigcup_{c\in
+    {\cal K}_F \cup {\cal K}_G} bv(c) = bv(A_F) \cup bv(A_G)$, et
+  \begin{align*}
+      fv(A_E)& = \Lambda_E\setminus \bigcup_{c\in {\cal K}_E} bv(c) \\
+      & = \Lambda_F \cup \Lambda_G \setminus \bigcup_{c\in {\cal K}_F
+      \cup {\cal K}_G} bv(c) \\
+&= \Lambda_F \setminus bv(A_F) \cup \Lambda_G\setminus bv(A_G) \\
+&= fv(A_F) \cup fv(A_G) = fv(F) \cup fv(G) = fv(E),
+  \end{align*}
+\item $\leq = \leq_F \cup \leq_G$ est un ordre partiel : pour tout
+  $c\in {\cal K}_F$ avec $x\in bv(c)$, on a $bv(F) \cap var(G) =
+  \emptyset$ donc il n'existe pas $c'\in {\cal K}_G$ tel que $x\in
+  fv(c)$, et r\'eciproquement pour $G$ et $F$,
+\item par construction de l'automate associ\'e \`a $F+G$, il est
+  clair que la propri\'et\'e \ref{prof-wf-nofree} est v\'erifi\'ee
+  pour toute variable de $bv(E)$ ;
+  \end{itemize}
+\item si $E=F.G$,
+  \begin{itemize}
+    \item idem,
+    \item idem,
+    \item soit $c\in {\cal K}_{A_E}$ et $y\in fv(c) \cap bv(A_E)$,
+    alors :
+    \begin{itemize}
+      \item si $c \in {\cal K}_{A_F}$, la propri\'et\'e est vraie
+      par hypoth\`ese d'induction,
+    \item si $c\in {\cal K}_{A_G}$, comme $E$ est bien form\'e, $bv(F) \cap bv(G) =
+    \emptyset$, $y\in bv(A_G)$ et donc la propri\'et\'e est vraie
+    par hypoth\`ese d'induction ;
+    \end{itemize}
+  \end{itemize}
+\item si $E=F\parallel G$,
+  \begin{itemize}
+    \item idem,
+    \item idem,
+    \item idem ;
+  \end{itemize}
+\item si $E=F^*$,
+  \begin{itemize}
+    \item clairement, on a $bv(A_E) = bv(A_F) = bv(F) = bv(E)$ et  de
+    m\^eme $fv(A_E) = fv(E)$,
+  \item $\leq_F = \leq_E$, puisqu'aucune nouvelle contrainte n'est
+    ajout\'ee. Par ailleurs, si $c$ est une contrainte apparaissant sur
+    une transition $(q_0^F,(m,V,K),q')$, et $c'$ est telle que $c\leq_F
+    c'$, toute transition de $E$ rajout\'ee par la construction de
+    l'automate pr\'eserve la relation,
+  \item vrai par hypoth\`ese d'induction sur $F$ ;
+\end{itemize}
+\item si $E = (x:Pred \mathbf{~in~} F)$,
+  \begin{itemize}
+    \item on a $bv(E) = bf(F) \cup \{x\}$ et $fv(E) = fv(F) \cup
+    fv(Pred) \setminus \{x\}$. Par construction de $A_E$, 
+    \begin{align*}
+        bv(A_E) = bv(A_F) \cup \{x\} = bv(E),
+    \end{align*}
+    et
+    \begin{align*}
+        fv(A_E) &= \Lambda_F \cup var(Pred) \setminus (bv(A_F) \cup
+        \{x\}) \\
+        &= (fv(F) \cup var(Pred)) \setminus \{x\} \\
+        &= var(E) \setminus bv(F) \cup \{x\} \\
+        &= fv(E),
+    \end{align*}
+  \item $\leq_E= \leq_F \cup (x:Pred,x:Pred) \cup \{(x:Pred,c') \mid
+    c'\in {\cal K}_F, x\in fv(c') \mbox{~ou~} \exists c\in {\cal K}_F,
+    c\leq_F c' \mbox{~et~} x\in fv(c)\}$ est bien  une relation d'ordre partiel :
+  \item $\leq_E$ est r\'eflexive : par hypoth\`ese d'induction, $\leq_F$
+    est r\'eflexive et $(x:Pred,x:Pred) \in \leq_E$,
+  \item $\leq_E$ est antisym\'etrique : quel que soit $c \neq
+    x:Pred$, si $x:Pred \leq c$, alors on ne peut avoir $c\leq x:Pred$
+    car aucun chemin ne repasse par $q_0^E$ et $\leq_F$ est
+    antisym\'etrique par hypoth\`ese,
+  \item enfin $\leq_E$ est transitive par construction si $\leq_F$ est
+  transitive. \hfill\qed
+\end{itemize}
+\end{itemize}
+\end{proof}
+
+On peut donc en d\'eduire ais\'ement la proposition suivante :
+\begin{prop}
+    Si $E$ est une expression bien-form\'ee, alors $A$ l'automate
+    construit \`a partir de $E$ est bien form\'e. 
+\end{prop}
+
+\begin{proof}
+On v\'erifie les propri\'et\'es de bonne formation de $A$ :
+\begin{itemize}
+  \item $\leq$ est bon ordre partiel d'apr\`es le lemme
+    \ref{lem:exp-auto} ;
+  \item la propri\'et\'e \ref{prof-wf-nofree}, d\'efinition
+    \ref{def:automate-bien-forme} est vraie pour les variables
+    li\'ees, or $bv(A)= var(E) \setminus \{\mathtt{Trace}\}$ donc 
+    elle est vraie pour toutes les variables de $A$ ;
+  \item  la propri\'et\'e \ref{prof-wf-trace}, d\'efinition
+    \ref{def:automate-bien-forme}, est vraie car $fv(A) = \Lambda
+    \setminus bv(A) = \Lambda \setminus (var(E) \setminus \{ Trace
+    \})$. \hfill\qed
+\end{itemize} 
+\end{proof} 
+
+On peut donc d\'efinir  le
+langage des expressions \textsf{FIDL}, appel\'e ensemble de traces, en fonction du langage reconnu
+par un automate. Ce langage est en fait la cl\^oture par pr\'efixe
+du langage de l'automate car cela correspond \`a la notion
+d'observation du comportement d'un syst\`eme en fonction
+d'\'ev\'enements ext\'erieurs. Cette observation \'etant finie et
+pouvantn s'interrompre arbitrairement, tout d\'ebut de comportement
+correct est un comportement correct.
+
+\begin{definition}
+    Pour toute expression \textsf{FIDL} $E$, l'\emph{ensemble de
+      traces} de l'expression $E$, not\'e $\Tr(E)$  est
+    d\'efini comme :
+$$
+\Tr(E) = Pref(L_{A_E}).
+$$
+\end{definition} 
+
+\section{V\'erification \& Validations}
+\label{sec:les-contraintes}
+
+Les automates \emph{FIDL} ont \'et\'e d\'efinis dans un but pr\'ecis :
+sp\'ecifier le comportement d'\'el\'ements d'un syst\`eme
+r\'eparti et permettre la v\'erification d'une implantation
+concr\`ete de ces sp\'ecifications. Cette v\'erification
+peut-\^etre r\'ealis\'ee de nombreuses mani\`eres dont les plus
+importantes dans le cas de mod\`eles bas\'es sur des syst\`emes de
+transitions sont le \emph{contr\^ole de mod\`ele} --- \emph{model-checking} --- et
+le test de conformit\'e --- \emph{conformance testing}. 
+Dans les deux  cas, on cherche \`a atteindre un \'etat particulier
+ou un repr\'esentant d'un ensemble d'\'etats particuliers du
+syst\`eme dans lequel une certaine propri\'et\'e est vraie. Dans le
+cas du contr\^ole de mod\`ele, ce parcours est fait sur le mod\`ele
+lui-m\^eme, c'est \`a dire la sp\'ecification pour valider
+celle-ci. Dans le cas du test de conformit\'e, ce parcours est fait
+en parall\`ele sur la sp\'ecification et
+l'implantation. Clairement, les deux m\'ethodes produisent un
+r\'esultat en un temps fini si la propri\'et\'e est
+v\'erifi\'ee pour un certain \'etat accessible, ou si le nombre
+d'\'etats accessibles est fini. 
+
+Le mod\`ele g\'en\'eral des automates \textsf{FIDL} d\'ecrit de
+mani\`ere compacte un ensemble d'\'etats potentiellement
+infini. L'alphabet utilis\'e n'est pas 
+obligatoirement fini car il comprend des ensembles de donn\'ees
+arbitraires, donc potentiellement infini, et utilise des pr\'edicats
+logiques et  des fonctions qui peuvent ne pas se terminer. Nous
+examinons donc dans cette section deux formes de simplification des
+automates \textsf{FIDL} permettant de faire en sorte que l'espace
+d'\'etat \`a v\'erifier demeure fini.
+
+\subsection{Domaines finis}
+\label{sec:regularite}
+
+Une premi\`ere solution consiste \`a rendre le domaine des valeurs
+possibles $\cal D$ fini.  Bien qu'elle soit
+triviale, nous donnons ici la preuve de la reconnaissabilit\'e des
+langages reconnus par les automates \textsf{FIDL} dans le cas o\`u les
+ensembles de donn\'ees sont finis.
+
+\begin{prop}[Reconnaissabilit\'e]
+    Si $\cal D$ le domaine des variables est fini et si toutes les
+    fonctions auxiliaires terminent, alors pour tout automate \textsf{FIDL}
+    $A$, le langage accept\'e par $A$, $L_A \subseteq \bar{\cal
+    E}^*$ est reconnaissable.
+\end{prop}
+
+\begin{proof}
+Soit $A=(Q,q_0,T,\Sigma \times{} {\cal P}\Lambda \times{} {\cal P}{\cal K}, \delta)$ un
+automate \textsf{FIDL} d\'eterministe. Si  $\cal D$ est fini alors
+$\bar{\cal E}$ est fini donc $\Sigma$ est fini car il ne  contient
+qu'un nombre fini de variables :
+\'etant donn\'ee un message $m$ d'arit\'e $k$, l'ensemble des
+valeurs possibles des param\`etres de $m$ est ${\cal D}^k$.
+
+Soit $A'=(Q_A,q_0^A,T_A, \{ m(v_1,\dots,v_n) \in \bar{\cal E} \mid
+\exists m(x_1,\dots,x_n) \in \Sigma\},\delta_A)$ avec
+\begin{itemize}
+  \item $Q_A = Q \times{}\{val:\Lambda \rightarrow  {\cal D}\cup \{\bot\}\}$, c'est \`a dire le produit des \'etats de
+  l'automate avec l'ensemble des valuations possibles pour
+  toutes les variables d\'eclar\'ees dans $A$. Nous notons 
+  $(q,val)$ un \'el\'ement de $Q_A$ ;
+\item $q_0^A = (q_0, \{x\mapsto \bot \mid x\in \Lambda\})$ ;
+\item $T_A = \{(q,val) \in Q_A\mid q \in T\}$,
+\item $\delta_a = \{ ((q,val),m,(q',val'))\mid  m\in \bar{\cal E} \mbox{~et~} 
+  \exists \sigma=(V,val_\sigma,pred),
+  \sigma'=(V',val_\sigma',pred'),val_\sigma\subseteq val,
+  val_{\sigma'}\subseteq val', (q,\sigma)\xrightarrow{m} (q',\sigma')\}$.
+\end{itemize}
+$Q_A$ et $\Sigma$ \'etant finis, $A'$  est un
+automate d'\'etat fini et son langage  $L_{A'}$ est \'evidemment reconnaissable.
+
+\paragraph{$L_A\subseteq L_{A'}$}
+Montrons par induction sur la longueur des mots que pour tout $u$ tel
+que $(q_0,\sigma_0) \xrightarrow{u} (q,\sigma)$ dans $A$, il existe
+$(q,val)\in Q_A$ tel que $q_0^A
+\xrightarrow{u}(q,val)$ dans $A'$.
+
+Soit $u$ un mot de  $L_A$ :
+\begin{itemize}
+  \item si $\#u=0$ alors $u=\epsilon$ donc $q_0\in T$ et $q_0^A\in T_A$, donc
+    $u\in L_{A'}$ ;
+  \item  si $\#u>0$, $u=v.a$, donc $(q_0,\sigma_0) \xrightarrow{v}
+      (q,\sigma) \xrightarrow{a} (q',\sigma')$ dans $A$. Par
+      hypoth\`ese d'induction,  $q_0^A \xrightarrow{v}(q,val)$ avec
+      $val_\sigma \subseteq val$ et comme $(q,\sigma) \xrightarrow{a}
+      (q',\sigma')$, on peut construire $val'=val_{\sigma'}\cup
+    \{x\mapsto \bot\mid x\in \Lambda \setminus V_{\sigma'}\}$ et l'on
+      a donc $(q,val)\xrightarrow{a}(q',val')$ et l'on d\'eduit
+      $q_0^A \xrightarrow{u}(q',val')$.
+\end{itemize}
+On a donc $L_{A} \subseteq L_{A'}$. 
+
+\paragraph{$L_{A'}\subseteq L_{A}$}
+Inversement, pour tout mot $u\in L_{A'}$ :
+\begin{itemize}
+  \item si $\#u=0$, $q_0^A\in T_{A'}$ donc $q_0\in T_A$ et $u\in
+  L_A$ ;
+\item si $\#u > 0$, on a $u=va$ donc $q_0^A \xrightarrow{v}
+  (q,val) \xrightarrow{a} (q',val')$ dans $A'$. Par hypoth\`ese
+  d'induction, on a $(q_0,\sigma_0) \xrightarrow{v} (q,\sigma)$ dans
+  $A$. On pose $val_{\sigma'} = val'$ et l'on a donc $(q,\sigma)
+  \xrightarrow{a} (q',\sigma')$ d'o\`u $u\in L_A$. 
+\end{itemize}
+On a donc $L_{A'} \subseteq L_{A}$.  \hfill\qed
+\end{proof}
+
+La variable globale $\mathtt{Trace}$ ne pouvant \^etre utilis\'ee que
+comme argument d'un pr\'edicat ou d'une fonction, et le codomaine de
+celles-ci \'etant par hypoth\`ese fini, son utilisation dans une
+contrainte ne pose pas de probl\`eme particulier.
+ 
+Le d\'epliage de l'automate \textsf{FIDL}, s'il est valide sur le
+plan th\'eorique puisqu'il nous permet de nous assurer que le nombre
+d'\'etat \`a explorer est fini, est peu pratique. On va donc garder
+la formulation initiale d'un automate avec contraintes et variables,
+et consid\'erer une formulation alternative dans laquelle les mots
+reconnus sont les solutions de probl\`emes de satisfaction de
+contraintes ou \textsf{CSP} --- \emph{Constraint Satisfaction Problem}
+en anglais. 
+
+\subsubsection{Instantiation dans un automate \textsf{FIDL}}
+\label{sec:csp-mono}
+
+\'Etant donn\'e un automate \textsf{FIDL} bien form\'e, une transition candidate $d=(q,(m(x_1,x_2,\dots,x_n),V,K),q')$ et un environnement courant
+$\sigma$, le franchissement de la transition est possible si l'on peut
+trouver une affectation des variables $x_i,
+1\leq i\leq n$ qui satisfasse les contraintes de $\sigma$. Soit $\vec{y} = (y_1,y_2,\dots,y_m)$, $m\leq n$ le
+vecteur constitu\'e uniquement des variables de
+$(x_1,x_2,\dots,x_n)$, alors pour chaque $y_i$, $1\leq i\leq m$, on a soit
+$y_i$ est d\'efini dans $\sigma$ avec une valeur $v$ et $y_i$ n'est
+pas d\'eclar\'e dans $V$, soit $y_i$ est ind\'efini --- mais
+d\'eclar\'e --- et il existe  $c_i = P(y_i,f(\bar{z}))$,
+une expression de contrainte dans
+$pred_\sigma \cup K$  pour $y_i$. Soit $K'$
+l'ensemble des contraintes sur les variables de  $\vec{y}$ telles que $\mathrm{val}_\sigma(y_i) =
+\bot$. Les contraintes n'\'etant par construction pas r\'ecursives
+et l'utilisation anticip\'ee de variables \'etant interdite, on
+d\'efinit l'\emph{ensemble de contraintes}  pour la
+transition $d$, $K_d$, comme \'etant la cl\^oture transitive de
+l'ensemble $K'$ par la \emph{relation de d\'ependance} $\rightarrow$ telle que
+$$
+\begin{array}{c}
+y \mathrm{~op~} f(z_1,\dots,z_n) \rightarrow y' \mathrm{~op~} f'(z_1',\dots,z'_m) \\
+\Updownarrow \\
+\exists i, 1\leq i \leq n, z_i = y'.\\
+\end{array}
+$$
+
+\begin{definition}[CSP d'instanciation]
+Le \emph{probl\`eme de satisfaction de contrainte} pour
+  l'\emph{instanciation d'un message} sur la  transition $d$, dans un
+  environnement $\sigma$, est un triplet $(X,K_d,dom)$ avec :
+  \begin{itemize}
+    \item $X$ un ensemble fini de variables contraintes ;
+    \item $K_d$ un ensemble fini de contraintes de la forme
+    $P(x, f(\bar{y}))$ avec $P$ un pr\'edicat bool\'een, $x$ une
+    variable de $X$ et $\bar{y}$ un n-uplet de valeurs et de variables
+    de $X\cup {\cal D}$ ;
+  \item $dom: X \rightarrow {\cal P}({\cal D})$ une fonction de
+  \emph{domaine} assignant les valeurs admissibles pour les variables de $X$.
+  \end{itemize}
+Une solution \`a ce probl\`eme, si elle existe, est une application  $s:X \rightarrow {\cal
+  D}$ telle que toutes les contraintes soient \'evalu\'ees
+  $\mathtt{vrai}$ et que toutes les images de variables $s(x)$
+  appartiennent au domaine de celles-ci, $dom(x)$.
+\end{definition}
+
+Par hypoth\`ese de finitude du domaine des variables, le codomaine de
+$dom$ est fini et ce probl\`eme peut \^etre r\'esolu en utilisant
+des algorithmes classiques de r\'esolution de CSP (\emph{cf.} infra) ou
+peut s'av\'erer insoluble ce qui interdit le franchissement de la transition.
+
+\subsubsection{Instantiation dans un automate synchronis\'e}
+
+Dans le cas d'un automate synchronis\'e  (voir section \ref{sec:reconn-par-synchr}), il
+est n\'ecessaire de g\'en\'erer un message qui soit susceptible de
+franchir simultan\'ement plusieurs transitions, plus
+pr\'ecis\'ement toutes les transitions d'automates dont l'alphabet
+contient le message. Ce probl\`eme se traite simplement en augmentant
+les CSP individuels de chaque automates de contraintes d'\'egalit\'e
+entre les variables communes pour obtenir un CSP global.
+
+\'Etant donn\'es $n$ automates $A_1,A_2,\dots,A_n$ dont les \'etats sont
+$(q_1,\sigma_1),(q_2,\sigma_2),\dots,(q_n,\sigma_n)$, et tels qu'il
+existe des  transitions $(q_0,((c,p,c',p',k,
+m,\vec{x_i},d),V,K),q_0')$, pour $1 \leq i\leq n$, on d\'efinit tout
+d'abord  $n$ instances de  CSP $(X_i,K_{d_i},dom_i), 1
+\leq i\leq n$ comme pr\'ec\'edemment. Ces instances sont jointes en
+un CSP unique $P=(X,K,dom)$ comme suit :
+\begin{itemize}
+  \item on renomme les variables de sorte que
+  $\cap_{1\leq i \leq n} X_i = \emptyset$ ;
+\item soit $l = \vert\vec{x_1}\vert$ le nombre de param\`etres
+  formels de la m\'ethode $m$, pour chaque $j, 1\leq j \leq l$ :
+  \begin{itemize}
+    \item s'il existe $x_{qj}$ et $x_{pj}$, $1\leq p,q \leq n$
+    tels que soit $val_{\sigma_q}(x_{qj}) \neq
+    val_{\sigma_q}(x_{pj})$ soit $x_{qj}\neq x_{pj}$ et  $x_{qj},x_{pj}
+    \in  {\cal D}$, alors  $P$ n'a pas de solution,
+  \item sinon, on ajoute \`a $X$ une nouvelle variable  $z$ et \`a  $K$
+    une nouvelle contrainte $x_{ij} = z$, pour  $1\leq i \leq n$.
+  \end{itemize}
+\end{itemize}
+
+Le syst\`eme  $P$ obtenu est ensuite r\'esolu par les m\^emes
+techniques que dans le cas d'un automate unique.
+
+\subsubsection{R\'esolution de CSP}
+\label{sec:resolution-de-csp}
+
+Il existe de nombreuses techniques de r\'esolution de CSP dont on
+trouvera un panorama dans \cite{cp-survey99} et
+\cite{csp-survey}. Pour les besoins de cette th\`ese, nous nous
+contenterons d'un rapide survol des diff\'erentes techniques
+utilisables. L'implantation concr\`ete choisie est d\'etaill\'ee
+dans le chapitre \ref{cha:methodes--outils}.
+
+Les diff\'erentes techniques de r\'esolution de syst\`emes de
+contraintes se r\'epartissent en trois grandes familles aux
+fronti\`eres \'eminemment perm\'eables :
+\begin{enumerate}
+  \item les \emph{techniques de recherche} dans lesquelles on explore
+  l'espace des solutions jusqu'\`a trouver la ou les solutions ;
+\item les \emph{techniques de consistance} qui \`a contrario vont \'elaguer
+  l'espace des solutions possibles, c'est \`a dire les domaines des
+  variables en explorant les incompatibilit\'es ;
+\item les \emph{techniques de recherche locales}, le plus souvent
+  bas\'ees sur des heuristiques et/ou des processus stochastiques.
+\end{enumerate}
+
+Tous les algorithmes de la premi\`ere famille se basent sur la
+technique de \emph{G\'en\'erer-et-Tester} (GT) : on g\'en\'ere une
+solution candidate, c'est \`a dire une valuation des variables, et on
+teste si le candidat est effectivement solution du CSP. Cet algorithme
+extr\^emement  inefficace est am\'elior\'e par le
+\emph{Backtracking} (BT) qui \'elague de la recherche les valuations
+partielles incoh\'erentes. En combinant cette technique de base avec
+la deuxi\`eme famille d'algorithme, on obtient les algoritmes de
+\emph{Backjumping} (BJ), \emph{Backmarking} (BM) et
+\emph{Backchecking} (BC) qui augmentent l'\'elagage par examen des
+contraintes effectivement viol\'ees.
+
+Les techniques de consistance sont bas\'ees sur une repr\'esentation
+en graphe du CSP o\`u un n\oe ud repr\'esente une variable --- et
+son domaine de valeurs possibles --- et un arc une contrainte unaire
+ou binaire. Les algorithmes \emph{Consistance-de-N\oe uds} (NC),
+\emph{Consistance-d'Arcs} (AC) et \emph{Consistane-de-Chemins} (PC)
+parcourent r\'ep\'etitivemant le graphe pour \'elaguer des domaines
+de variables les valeurs qui ne peuvent satisfaire les contraintes
+auxquelles cette variable est li\'ee. La diff\'ecence r\'eside
+essentiellement dans la profondeur de la recherche qui est men\'ee
+apr\`es chaque mise \`a jour d'une variable. Ces techniques
+\'etant g\'en\'eralement incompl\`etes, elles se combinent avec la
+premi\`ere famille comme on l'a d\'ej\`a vu pour l'\'elagage. Le
+Backtracking pr\'esentant l'inconv\'enient de d\'etecter
+tardivement les incoh\'erences, on peut lui adjoindre une technique
+de Lookahead qui va \'elaguer les incoh\'erences introduites par une
+certaine valuation avant la poursuite de la recherche d'une solution
+en appliquant une des techniques de maintien de la consistance.
+
+Enfin, les techniques de recherches locales dont la plus connue est la
+\emph{Descente de Gradient}  --- \emph{Hill-Climbing} --- cherchent
+\`a am\'eliorer une solution partielle en accroissant par \'etape
+le nombre de contraintes satisfaites. La \emph{Minimisation des
+  Conflits} cherche en plus les solutions voisinent qui minimisent le
+nambre de conflits. Ces m\'ethodes de base ayant tendance \`a se
+retrouver \og pi\'eg\'ees\fg{} dans des minima locaux, on peut les
+am\'eliorer soit en introduisant des sauts al\'eatoires ---
+technique du Random-Walk --- soit en maintenant une liste de solutions
+provisoirement interdities --- m\'ethode de la \emph{Recherche
+  Taboue} avec ou sans crit\`ere d'aspiration. On trouvera dans
+\cite{modern-heuristics} une \'etude tr\`es compl\`ete et r\'ecente
+des diff\'erentes m\'ethodes heuristiques permettant de r\'esoudre
+efficacement des probl\'emes d'exploration d'espaces d'\'etats tels
+que les CSP.
+
+\subsection{Domaines reconnaissables}
+
+Une autre solution consiste \`a consid\'erer l'ensemble des domaines
+des variables de mani\`ere symbolique. On peut ainsi esp\'erer
+pouvoir manipuler une repr\'esentation finie d'un ensemble infini et
+montrer ou mettre en \'evidence des propri\'et\'es sur des
+ensembles infinis de valeurs en n'explorant qu'une partie finie des
+repr\'esentations possibles. Les langages reconnaissables sont une
+classe particuli\`ere de repr\'esentation finie d'ensembles infinis
+que l'on peut utiliser pour repr\'esenter un domaine de valeurs
+possibles sous une forme symbolique. 
+Cette approche a \'et\'e utilis\'ee, entre autres, avec succ\`es dans \cite{boigelot-verif-proto} pour la
+repr\'esentation de files de messages non born\'ees dans les
+protocoles de communication, et dans \cite{wolper-auto-constraint} pour
+la repr\'esentation de formules de l'arithm\'etique de Presburger et
+donc la r\'esolution de syst\`emes d'\'equations lin\'eaires dans
+les entiers ou la repr\'esentation d'ensembles d'entiers
+lin\'eairement contraints. 
+
+C'est un fait bien connu qu'il existe une relation intime entre
+diverses cat\'egories de logiques et diverses formes d'automates, au
+sens o\`u les mod\`eles des unes sont les langages des autres. Par
+exemple la logique \textsf{MSO}, \emph{logique monadique du second
+  ordre}, a pour mod\`ele les langages reconnaissables par un
+automate fini. L'arithm\'etique
+de Presburger, c'est \`a dire les formules du premier ordre sur les
+entiers utilisant le pr\'edicat $\leq$ et la fonction $+$ est elle
+aussi li\'ee aux automates. Dernier exemple classique, les mod\`eles
+de formules de la logique temporelle lin\'eaire sont des mots
+infinies reconnaissables par un automate dit de B\"uchi. 
+
+Sous certaines hypoth\`eses quant \`a la forme de l'ensemble des valeurs $\cal D$, des types et
+des fonctions ou pr\'edicats utilis\'es dans les contraintes, un
+automate \textsf{FIDL} peut \^etre assimil\'e \`a un
+\emph{transducteur rationnel}, c'est \`a dire un automate fini dont
+le langage reconnu est une partie rationnelle d'un mono\"{\i}de 
+construit sur un alphabet de n-uplets de lettres. Plus
+pr\'ecis\'ement, un automate \textsf{FIDL} respectant ces
+contraintes reconna\^{\i}t une partie rationnelle de $({\cal X}\times{}{\cal
+  D}^{\vert \Lambda \vert})^*$. Le mono\"{\i}de $({\cal X}\times{}{\cal
+  D}^{\vert \Lambda \vert})^*$ \'etant isomorphe au mono\"{\i}de ${\cal
+  X}^*\times{}({\cal D}^{\vert \Lambda \vert})^*$, on peut donc voir un
+automate \textsf{FIDL} comme d\'efinissant une relation entre des
+s\'equences d'enveloppes de messages et des valeurs contenues dans
+ces messages, et donc distinguer nettement la \emph{partie
+  contr\^ole} de l'automate FIDL, c'est \`a dire les s\'equences de
+messages qu'il repr\'esente, de la \emph{partie donn\'ee} c'est \`a
+dire les valeurs contenues dans ces messages.
+
+Cette approche est tr\`es int\'eressante du point de vue de la
+v\'erification car elle permet de traiter les messages de mani\`ere
+symbolique en identifiant les ensembles de valeurs dont le
+comportement est identique comme un seul \'etat, tout en gardant la
+possibilit\'e de construire explicitement ces valeurs. De plus, un
+transduction rationnelle \'etant inversible, on a ainsi la
+possibilit\'e de d\'efinir ais\'ement les messages en fonction des
+valeurs, ou les valeurs en fonction des messages.
+
+\section{Conclusion}
+
+Les automates que nous avons d\'efinis dans ce chapitre sont proches
+des \emph{Machines d'\'Etats Fini \'Etendues} --- \emph{Extended Finite
+State Machines} ou \textsf{EFSM} --- couramment utilis\'ees pour
+la mod\'elisation de s\'emantiques formelles de langages de
+haut-niveau comprenant des interactions entre diff\'erentes
+entit\'es dans un syst\`eme, tels que les Statecharts. Les EFSM
+posent toutefois des probl\`emes en termes de composition dans la
+mesure o\`u ils comprennent une notion explicite d'\'ev\'enement
+\'emis et re\c{c}us qui peuvent permettre \`a plusieurs EFSM de
+communiquer de mani\`ere synchrone ou asynchrone. La s\'emantique
+des d\'eclenchements de transition n'est toutefois pas toujours
+tr\`es claire lorsque les situations deviennent un peu complexe du
+fait de questions de priorit\'e entre \'ev\'enements et de
+diff\'erences entre s\'emantiques de petit pas et s\'emantiques de
+grand pas.
+
+Nous avons choisi une formalisation qui soit proche de la th\'eorie
+classique des langages formels et plus particuli\`erement des
+langages rationnels pour lesquels il existe une vaste litt\'erature,
+de nombreux outils et  techniques de v\'erification et une
+s\'emantique de la composition simple bas\'ee sur des op\'erations
+\'el\'ementaires internes \`a la th\'eorie des langages. Nous
+verrons dans la suite de ce travail que ces automates s'apparentent
+plut\^ot \`a des \textsf{IOLTS} symboliques.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "these"
+%%% End:
+ 

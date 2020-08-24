@@ -1,0 +1,296 @@
+
+Comme Alphonse Allais jugeait sage de "mettre les villes \`a la
+campagne et les campagnes \`a la ville", j'ai cherch\'e dans
+ce travail \`a insuffler un peu de th\'eorie dans la pratique et un
+peu de pratique dans la th\'eorie. La th\'eorie est ce qui permet de
+construire une repr\'esentation du monde sur laquelle notre esprit
+puisse op\'erer, la pratique est ce qui justifie \emph{in fine} la
+th\'eorie. Et si l'on peut concevoir, en toute l\'egitimit\'e, de
+construire des logiciels sans mod\`eles et sans th\'eorie, ou de
+produire des th\'eor\`emes sans r\'ef\'erences \`a des
+r\'ealit\'es tangibles, la dialectique du \emph{praxis} et du
+\emph{logos} est la force essentielle de la d\'emarche scientifique :
+c'est parce que la r\'ealit\'e pose des probl\`emes et offre des
+points de r\'esistance \`a notre volont\'e, que la pens\'ee peut
+s'en emparer et construire des repr\'esentations mentales
+aux fins de r\'esolution de ces probl\`emes et de r\'eduction de
+ces r\'esistance ; c'est parce que l'esprit produit un discours sur
+la r\'ealit\'e que l'action peut s'en saisir et faire r\'esonner
+dans le r\'eel l'\'echo de nos th\'eories. Pour le dire d'une
+formule lapidaire : les probl\`emes existent parce que nous les
+cr\'eons et nous cr\'eons des probl\`emes pour pouvoir les
+r\'esoudre. 
+
+Plus concr\`etement, mon travail, et bien que cet objectif se soit
+impos\'e tardivement \`a mesure que mes r\'eflexions progressaient
+et que les probl\`emes auxquelles j'\'etaient confront\'es
+s'accumulaient, a pour but de mettre en oeuvre une th\'eorie pour
+aider \`a la r\'esolution d'un certain nombre de 
+probl\`emes induits par la r\'ealisation de logiciels dans le cadre
+d'une soci\'et\'e de services, probl\`emes qui sont tous li\'es
+\`a la notion extr\^emement floue de \emph{qualit\'e}. 
+
+\section*{Contexte}
+
+Cette th\`ese s'est d\'eroul\'ee dans le cadre d'une collaboration
+entre la soci\'et\'e NORSYS et le LIFL, cofinanc\'ee par la
+R\'egion Nord-Pas-de-Calais. NORSYS est une soci\'et\'e de service
+informatique cr\'e\'ee en 1990 et sp\'ecialis\'ee dans la
+r\'ealisation de logiciels \`a fa\c{c}on pour des clients de tailles
+et de secteurs divers : banques, assurances, secteur social, grande
+distribution. Les logiciels r\'ealis\'es ont tous pour
+caract\'eristiques communes d'\^etre des outils de gestion partie
+prenante d'un syst\`eme d'information d'entreprise, \'evoluant dans
+un environnement techniquement h\'et\'erog\`ene, pour des
+utilisateurs de qualifications diverses. Il s'agit donc pour
+l'essentiel de traitement de l'information, autrement dit de
+l'informatique de gestion. 
+
+Le d\'emarrage de cette th\`ese s'est fait \`a peu pr\`es
+conjointement avec l'apparition  au sein de la soci\'et\'e dans ce qu'il
+\'etait convenu d'appeler les \emph{Nouvelles Technologies de l'Information
+et de la Communication}, terme pompeux et vague qui dans la
+r\'ealit\'e d\'esigne la transformation des applications et des
+syst\`emes depuis des technologies client lourd-site central --- voir
+terminaux passifs-mainframes ---, vers des technologies r\'eparties
+accessibles depuis des \emph{clients l\'egers}, c'est \`a dire des
+navigateurs \emph{web}. Ce changement technologique ne s'est pas fait
+sans heurts et il a fallu l'accompagner d'un changement dans les
+m\'ethodes d'analyse, de conception et bien entendu de
+d\'evelopement. Une partie non n\'egligeable de mes contributions au
+sein de l'entreprise a donc consister \`a accompagner ce changement
+par la r\'ealisation de prototypes, le conseil dans la conception
+d'architectures locicielles, la mise en \oe uvre de techniques de
+d\'evellopement inspir\'ees des pratiques de l'\emph{open-source} et
+la formation des personnes.
+
+Une autre \og r\'evolution \fg, dont le terme n'as pas encore
+\'et\'e atteint, est la g\'en\'eralisation du ph\'enom\`ene
+d'externalisation des d\'evellopements, autrement appel\'e
+d\'evellopement \emph{off-shore}. L'arriv\'ee sur le march\'e des
+services informatiques de concurrents issus de pays \'emergents
+--- Inde, Chine, ex-Pays de l'Est, Maghreb et Moyen-Orient --- et
+proposant les services d'une main d'\oe uvre qualifi\'ee dont les
+salaires sont nettement inf\'erieurs \`a ceux pratiqu\'es dans les
+pays d\'evellop\'es entra\^{\i}ne une baisse des prix
+g\'en\'eralis\'ee dans les m\'etiers du d\'evellopement \`a
+fa\c{c}on de logiciels. Pour faire face \`a ce mouvement qui, s'il
+est encore marginal en France, tend \`a s'intensifier, il n'y a pas
+de solutions miracles mais il est certain que l'abscence de
+r\'eaction ne peut qu'\^etre pr\'ejudiciable \`a moyen voir \`a
+court terme. 
+
+Parmi les solutions possibles pour r\'epondre \`a cette
+\'evolution, il en est deux qui concernent directement mon activit\'e
+au sein de l'entreprise : 
+\begin{itemize}
+  \item d'une part l'am\'elioration de la qualit\'e du processus de
+    production de fa\c{c}on \`a r\'eduire le temps de
+    d\'eveloppement --- analyse et conception, d\'eveloppement 
+    proprement dit, tests, recette. Compte tenu de l'impact des phases
+    de v\'erification et de correction d'erreurs sur les co\^uts,
+    un accroissement  de la qualit\'e de la production doit se
+    traduire m\'ecaniquement par une r\'eduction du temps de
+    production en raison inverse de celui-l\`a ;
+  \item d'autre part la mise en place d'un offre de service de
+  d\'eveloppement \emph{near-shore} donc des outils aff\'erents, \'etant entendu que si l'on ne
+  peut r\'esister \`a un changement, il est pr\'ef\'erable de
+  feindre de le contr\^oler.
+\end{itemize}
+Ces deux points seront analys\'es et discut\'es plus en d\'etail dans la
+troisi\`eme partie de cette th\`ese, o\`u l'on verra que ces 
+pr\'eoccupations sont directement li\'ees \`a une d\'emarche
+globale qui constitue le c\oe ur de ce travail.
+
+\section*{Probl\`emes}
+
+Cette th\`ese cherche donc \`a r\'esoudre \`a ces diff\'erents
+probl\`emes, ou plus modestement \`a contribuer \`a leur
+r\'esolution, \`a partir des trois hypoth\`eses suivantes :
+\begin{enumerate}
+  \item les \emph{composants logiciels} sont la bonne r\'eponse \`a la
+  complexit\'e croissante des applications, si on ne se limite pas
+  \`a leur utilisation dans le cadre de plateformes technologiques
+  adhoc\cite{szyperski} mais si on s'en sert aussi comme un outil pour
+  concevoir les applications ;
+\item la v\'erification et la validation automatis\'ee des composants produits doivent
+  \'etre au c\oe ur du processus de d\'eveloppement pour assurer un
+  niveau de qualit\'e \'elev\'e et constant ;
+\item des contrats comportementaux formalis\'es supportant de
+  multiples niveaux d'abstraction sont le carburant dont peut se
+  nourrir un tel processus.
+\end{enumerate}
+
+Ces hypoth\`eses nous ont conduit \`a formuler la proposition qui
+est d\'efendue dans cette th\`ese et qui se compose : d'un
+mod\`ele de composants abstrait permettant l'expression de contrats
+comportementaux \`a partir des interfaces et d\'ependances de
+composants ; d'une s\'emantique formelle de la statique et de la dynamique de ce
+mod\`ele sous la forme de langages et d'op\'erations simples
+associ\'es, s\'emantique qui permet de s'assurer de l'existence et
+du mantien de propri\'et\'es de s\^uret\'e pour un syst\`eme de
+composants ; d'outils th\'eoriques pour la validation et la
+v\'erification de composants concrets, et plus particuli\`erement par
+des m\'ethodes de test de conformit\'e et de test de r\'esilience ;
+d'une int\'egration de cette d\'emarche dans le cycle de production
+du logiciel ; enfin d'un prototype d'outil d\'emontrant les
+capacit\'es d'automatisation des tests fonctionnels \`a partir d'un
+mod\`ele de composant abstrait et en fonction de diff\'erentes
+implantations.
+
+En r\'esum\'e, je d\'efends l'id\'ee que des composants
+formalis\'es dans un langage idoine peuvent \^etre test\'es
+automatiquement et utilis\'es \`a diff\'erents degr\'e
+d'abstraction de mani\`ere \`a obtenir et maintenir un niveau
+de qualit\'e mesur\'e.
+
+Il est bien connu que le test repr\'esente un part tr\`es importante
+du co\^ut d'un projet de d\'eveloppement, les \'evaluations se
+trouvant g\'en\'eralement dans une fourchette de 30 \`a 50\% du
+co\^ut total\cite{}. Ce que l'on entend par \emph{test} dans ces
+\'evaluations est le \emph{test syst\`eme} ou dans notre contexte le
+\emph{test de recette} --- ou plus commun\'ement \emph{la recette}
+--- c'est \`a dire la phase succ\'edant au d\'eveloppement et
+durant laquelle le logiciel produit est test\'e par des utilisateurs
+ou assimil\'e. Ce co\^ut comprend non seulement le temps
+n\'ecessaire pour ex\'ecuter les plans de test en
+fonction des exigences initiales de l'application, mais aussi le temps
+n\'ecessaire \`a l'analyse des r\'esultats de ces tests, le temps
+pris \`a corriger les erreurs d\'etect\'ees et bien entendu le
+temps n\'ecessaire \`a la correction des erreurs introduites par les
+corrections. Dans le meilleur des cas, ce processus converge
+jusqu'\`a ce que plus aucune erreur ne soit signal\'ee ou jusqu'\`a
+ce qu'un certain seuil --- de temps ou de niveau d'exigences
+correctement implant\'ees --- soit franchi.
+
+Le co\^ut de cette phase de recette est non seulement correl\'e \`a
+la qualit\'e des d\'eveloppements proprement dits mais aussi \`a la
+qualit\'e du processus d'analyse et de mod\'elisation des exigences,
+donc \`a l'ensemble des activit\'es du processus de construction du
+logiciel. Il est \'evident que si les sp\'ecifications sont
+incompl\`etes, ambig\^ues, changeantes, si elles sont mal comprises
+par les concepteurs et d\'eveloppeurs, la phase de recette verra son
+co\^ut augmenter consid\'erablement. L'importance de disposer de
+sp\'ecifications pr\'ecises est donc une fois encore \`a
+souligner. 
+
+A contrario, le co\^ut des tests r\'ealis\'es en \emph{cours de
+  d\'eveloppement}, ce que l'on appelle commun\'ement les
+\emph{tests unitaires} est relativement plus faibles : ces tests
+sont \'ecrits au fil de l'eau par les \'equipes de
+d\'eveloppement et s'int\`egrent naturellement dans la
+r\'ealisation de l'application proprement dite. Il est par cons\'equent
+\'evident que la meilleure mani\`ere de r\'eduire le co\^ut
+parfois prohibitif de la recette est donc de maximiser le nombre
+d'erreurs d\'etect\'ees le plus t\^ot possible, et donc
+  d'introduire le plus t\^ot possible les tests fonctionnels complets
+  de l'application de sorte que le passage en recette se fasse sur un
+  logiciel d\'ej\`a en grande partie test\'e, unitairement et
+  globalement.
+ 
+Notre proposition vise donc \emph{in fine} \`a relier ce qui est usuellement
+s\'eparer : les exigences, les mod\`eles, le code et le test
+fonctionnel. Ce lien se fait gr\^ace \`a un mod\`ele uniforme, suffisamment abstrait
+pour permettre de mod\'eliser l'application \`a diff\'erents
+niveaux, et suffisamment formel pour permettre la d\'erivation
+automatis\'ee de cas de tests. 
+
+\section*{R\'esum\'e}
+
+La premi\`ere partie
+traite des composants logiciels : comment ils sont
+mod\'elis\'es et sp\'ecifi\'es, \`a quels types de logiciels ils
+correspondent, comment ils sont ex\'ecut\'es, comment nous avons
+choisi de repr\'esenter leur structure et leur comportement et quel
+est le formalisme sous-jacent, c'est \`a dire la s\'emantique
+associ\'ee au langage d\'ecrivant les composants. Le chapitre
+\ref{chap-etatdelart} est une synth\`ese des travaux et syst\`emes
+existants que l'on peut rapprocher de pr\`es ou de loin de la notion
+de composants, s\'epar\'e en deux sections qui traitent
+respectivement du probl\`eme de la manipulation concr\`ete de composants au travers de
+langages ou de plateformes et de la mod\'elisation de ceux-ci dans un
+langage ou un syst\`eme formel. Le chapitre \ref{chap-modelefidl}
+d\'efinit de mani\`ere informelle les diff\'erents \'el\'ements
+que nous avons choisi de prendre en compte et qui collectivement
+permettent de constuire des mod\`eles de syst\`emes de composants
+logiciels. Ce chapitre contient une section introductive pr\'esentant
+les grandes caract\'eristiques du mod\`ele au travers d'un exemple,
+une description de la syntaxe du langage concret utilis\'e pour
+repr\'esenter ces mod\`eles et une d\'efinition de la s\'emantique
+de ce langage en termes d'ensembles de traces observables. Ceci nous
+conduit au chapitre \ref{chap-automatesfidl} \`a d\'efinir la
+structure repr\'esentant le comportement des \'el\'ements d'un
+mod\`ele FIDL, les automates FIDL, pour lesquels nous d\'efinirons
+et prouverons un certain nombre de propri\'et\'es. En particulier,
+nous montrerons que ces automates contiennent l'int\'egralit\'e de
+l'information n\'ecessaire \`a la compr\'ehension d'un mod\`ele et
+qu'ils sont suffisamment riche pour prendre en compte diverses
+probl\'ematiques propres aux syst\`emes de composants r\'epartis.
+Le dernier chapitre de cette partie, le chapitre
+\ref{chap-composition}, s'int\'eressera \`a la composition de
+syst\`emes de composants, de mani\`ere statique et dynamique, au
+probl\`eme du sous-typage comportemental et donc de la
+substituabilit\'e des interfaces et aux
+propri\'et\'es que l'on peut obtenir lors de cette composition.
+
+La seconde partie est d\'evolue au test de ces m\^emes
+composants. Nous commencerons par un panorama du test de logiciel, de
+son vocabulaire, de ses probl\`emes, panorama plus
+particuli\`erement focalis\'e sur le \emph{test fonctionnel} ou test
+\emph{bo\^{\i}te noire}, et encore plus pr\'ecis\`ement sur le test
+automatique \`a partir de mod\`eles formels. Ce chapitre (\ref{chap-etatarttest}) comprend
+par ailleurs une section sur la question de l'\'evaluation de la
+fiabilit\'e du logiciel, question qui prendra toute son importance
+lors de l'analyse du probl\`eme de la s\'election des tests
+(\ref{chap-selectiontest}) et dans la troisi\`eme partie. Le
+deuxi\`eme chapitre pr\'esente le mod\`ele formel utilis\'e pour
+le test, une extension du mod\`ele classique du test de conformit\'e
+d'\textsf{IOTS} pour les composants, ce qui nous permettra de
+construire des testeurs pour la propri\'et\'e de consistance de
+composants introduite au chapitre \ref{chap-composition}, testeurs
+pour lesquels on pourra prouver des propri\'et\'es
+d'exhaustivit\'e. En particulier, nous \'etudierons dans ce chapitre
+la notion de testeur de conformit\'e et celle de testeur de
+r\'esilience. Sachant qu'une garantie d'exhaustivit\'e n'est jamais
+accessible par le tests, nous chercherons \`a d\'efinir dans le
+dernier chapitre (\ref{chap-selectiontest}) comment s\'electionner
+les cas de tests les plus pertinents \`a partir d'un ensemble
+exhaustif. 
+
+Pour relier ces deux parties, la troisi\`eme partie de cette th\`ese
+s'int\'eressera aux questions pos\'es par le g\'enie logiciel, afin
+de d\'efinir les grandes lignes de ce qui pourrait \^etre un
+processus de d\'eveloppement de syst\`emes de composants
+\emph{structur\'e par les composants} et \emph{dirig\'e par les
+  tests}. Le chapitre \ref{chap-processdevcomposants} sera donc
+consacr\'e \`a l'\'etude d'un processus de d\'eveloppement
+orient\'e-composants et  dirig\'e par les mod\`eles, autrement dit
+un avatar du trop fameux \emph{Model Driven Engineering} promu depuis peu
+nouvelle pierre philosophale du g\'enie logiciel. Ce chapitre, non
+plus que la th\`ese qui le contient, n'ayant pas pour objectif
+principal de recherche le processus d'ing\'enierie des logiciels,
+je me limiterai \`a l'\'etude des cas concrets rencontr\'es dans le
+cadre de NORSYS et n'aurai pas la volont\'e d'\'etablir un
+v\'eritable panorama exhaustif du domaine. Le second chapitre
+pr\'esentera des outils et des m\'ethodes mises en \oe uvre ou en
+cours de d\'eveloppement pour permettre l'utilisation concr\`ete de
+ce processus de d\'eveloppement lors de projets. Le dernier
+chapitre, enfin, d\'etaillera un \'el\'ement important de mon
+travail qui est la r\'ealisation d'un prototype de mise en \oe uvre
+des id\'ees avanc\'ees dans la th\`ese. 
+
+Et parce qu'il n'est pas de bonne compagnie qui ne doive se quitter,
+je concluerai enfin par un r\'esum\'e des contributions que j'estime \^etre
+les plus importantes de ce travail et par une revue des perspectives
+ouvertes et qu'il serait souhaitable d'approfondir. Le lecteur
+pointilleux pourra se reporter aux annexes pour y d\'ecouvrir le
+d\'etail de la grammaire du langage FIDL et une synth\`ese des
+principales caract\'eristiques du langage et du compilateur Jaskell
+qui sont utilis\'es respectivement pour l'\'ecriture de
+sp\'ecifications et pour l'ex\'ecution et l'analyse des r\'esultats
+des tests. 
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "these"
+%%% End: 
